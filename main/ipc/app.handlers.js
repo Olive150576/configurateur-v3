@@ -11,6 +11,19 @@ function register(ipcMain) {
   ipcMain.handle('app:getBackups', () => wrap(() => BackupService.getBackups()));
   ipcMain.handle('app:restore',    (_, file) => wrap(() => BackupService.restore(file)));
 
+  // Statut sauvegarde automatique
+  ipcMain.handle('app:getAutoBackupStatus', () => wrap(() => {
+    const db = getDb();
+    const get = (key, def) => { const r = db.prepare('SELECT value FROM app_config WHERE key = ?').get(key); return r ? r.value : def; };
+    return {
+      enabled:        get('auto_backup_enabled', 'true') === 'true',
+      time:           get('auto_backup_time', '20:00'),
+      retentionDays:  parseInt(get('auto_backup_retention_days', '30')) || 30,
+      lastBackupDate: get('last_auto_backup_date', ''),
+      lastBackupTime: get('last_auto_backup_time', ''),
+    };
+  }));
+
   // Config
   ipcMain.handle('app:getConfig', (_, key) => wrap(() => {
     const db = getDb();

@@ -71,7 +71,8 @@ contextBridge.exposeInMainWorld('api', {
     getConfig:     (key)     => ipcRenderer.invoke('app:getConfig', key),
     setConfig:     (key, val)=> ipcRenderer.invoke('app:setConfig', key, val),
     getStats:      ()        => ipcRenderer.invoke('app:getStats'),
-    getDashboard:  ()        => ipcRenderer.invoke('app:getDashboard'),
+    getDashboard:        ()        => ipcRenderer.invoke('app:getDashboard'),
+    getAutoBackupStatus: ()        => ipcRenderer.invoke('app:getAutoBackupStatus'),
     getLogo:       ()        => ipcRenderer.invoke('app:getConfig', 'company_logo'),
   },
 });

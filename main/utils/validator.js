@@ -17,7 +17,6 @@ class ValidationError extends Error {
 function validateProduct(product) {
   const errors = [];
 
-  if (!product.id?.trim()) errors.push('ID produit obligatoire');
   if (!product.name?.trim()) errors.push('Nom produit obligatoire');
 
   if (!product.ranges || product.ranges.length === 0) {
@@ -44,8 +43,8 @@ function validateProduct(product) {
 
   if (product.options) {
     product.options.forEach((o, i) => {
-      if (!o.id?.trim() || !o.name?.trim())
-        errors.push(`Option ${i + 1}: id et nom obligatoires`);
+      if (!o.name?.trim())
+        errors.push(`Option ${i + 1}: nom obligatoire`);
       if (typeof o.price !== 'number' || o.price < 0)
         errors.push(`Option "${o.name}": prix invalide`);
     });

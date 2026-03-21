@@ -61,6 +61,10 @@ app.whenReady().then(async () => {
   appHandlers.register(ipcMain);
   printHandlers.register(ipcMain);
 
+  // Démarrer le scheduler de sauvegarde automatique
+  const BackupScheduler = require('./services/BackupScheduler');
+  BackupScheduler.start();
+
   createWindow();
 });
 

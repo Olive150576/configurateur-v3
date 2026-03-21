@@ -73,4 +73,22 @@ function esc(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+async function checkAutoBackupNotif() {
+  try {
+    const res = await window.api.app.getAutoBackupStatus();
+    if (!res.ok || !res.data.enabled) return;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (res.data.lastBackupDate === todayStr) {
+      const t = new Date(res.data.lastBackupTime);
+      const hm = t.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      const notif = document.createElement('div');
+      notif.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 16px;font-size:12px;color:#166534;z-index:9999;display:flex;align-items:center;gap:8px;box-shadow:0 2px 8px rgba(0,0,0,.1)';
+      notif.innerHTML = `✅ <span>Sauvegarde automatique effectuée aujourd'hui à <strong>${hm}</strong></span>`;
+      document.body.appendChild(notif);
+      setTimeout(() => notif.remove(), 5000);
+    }
+  } catch { /* silencieux */ }
+}
+
 loadDashboard();
+checkAutoBackupNotif();

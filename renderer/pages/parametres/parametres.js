@@ -112,8 +112,61 @@ async function saveDefaultSettings() {
 async function loadBackups() {
   document.getElementById('btn-backup-now').onclick = handleBackupNow;
   document.getElementById('btn-refresh-backups').onclick = refreshBackups;
+  document.getElementById('btn-save-auto-backup').onclick = saveAutoBackupSettings;
+  document.getElementById('auto-backup-enabled').addEventListener('change', e => {
+    document.getElementById('auto-backup-settings').style.opacity = e.target.checked ? '1' : '0.4';
+    document.getElementById('auto-backup-settings').style.pointerEvents = e.target.checked ? '' : 'none';
+  });
   setupRestoreModal();
+  await loadAutoBackupSettings();
   await refreshBackups();
+}
+
+async function loadAutoBackupSettings() {
+  const res = await window.api.app.getAutoBackupStatus();
+  if (!res.ok) return;
+  const s = res.data;
+
+  document.getElementById('auto-backup-enabled').checked = s.enabled;
+  document.getElementById('auto-backup-time').value      = s.time || '20:00';
+  const sel = document.getElementById('auto-backup-retention');
+  sel.value = String(s.retentionDays);
+  if (!sel.value) sel.value = '30';
+
+  document.getElementById('auto-backup-settings').style.opacity       = s.enabled ? '1' : '0.4';
+  document.getElementById('auto-backup-settings').style.pointerEvents = s.enabled ? '' : 'none';
+
+  const badge = document.getElementById('auto-backup-status-badge');
+  if (s.enabled) {
+    badge.textContent = `Activée · ${s.time}`;
+    badge.className   = 'badge badge-success';
+  } else {
+    badge.textContent = 'Désactivée';
+    badge.className   = 'badge badge-gray';
+  }
+
+  const lastEl = document.getElementById('auto-backup-last');
+  if (s.lastBackupTime) {
+    const d = new Date(s.lastBackupTime);
+    lastEl.textContent = `Dernière sauvegarde automatique : ${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })}`;
+  } else {
+    lastEl.textContent = 'Aucune sauvegarde automatique effectuée.';
+  }
+}
+
+async function saveAutoBackupSettings() {
+  const enabled   = document.getElementById('auto-backup-enabled').checked;
+  const time      = document.getElementById('auto-backup-time').value || '20:00';
+  const retention = document.getElementById('auto-backup-retention').value || '30';
+
+  await Promise.all([
+    window.api.app.setConfig('auto_backup_enabled',        String(enabled)),
+    window.api.app.setConfig('auto_backup_time',           time),
+    window.api.app.setConfig('auto_backup_retention_days', retention),
+  ]);
+
+  Utils.toast('Paramètres de sauvegarde automatique enregistrés', 'success');
+  await loadAutoBackupSettings();
 }
 
 function setupRestoreModal() {
