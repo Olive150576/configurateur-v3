@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Configurateur V3</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    .container { max-width: 900px; width: 100%; }
+
+    .header { text-align: center; color: white; margin-bottom: 50px; }
+    .header h1 { font-size: 42px; font-weight: 700; margin-bottom: 8px; }
+    .header p { font-size: 16px; opacity: 0.8; }
+    .version { display: inline-block; background: rgba(255,255,255,0.15);
+      padding: 4px 14px; border-radius: 20px; font-size: 13px;
+      margin-top: 10px; backdrop-filter: blur(10px); }
+
+    .stats-bar {
+      display: flex; gap: 20px; justify-content: center;
+      margin-bottom: 40px;
+    }
+    .stat-pill {
+      background: rgba(255,255,255,0.1); color: white;
+      padding: 8px 20px; border-radius: 30px; font-size: 14px;
+      backdrop-filter: blur(10px);
+    }
+    .stat-pill strong { font-size: 18px; margin-right: 4px; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .card {
+      background: white; border-radius: 12px; padding: 28px;
+      cursor: pointer; text-decoration: none; color: inherit;
+      display: flex; flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      transition: transform 0.2s, box-shadow 0.2s;
+      border-top: 4px solid transparent;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+    }
+    .card.blue  { border-top-color: #2563eb; }
+    .card.green { border-top-color: #059669; }
+    .card.amber { border-top-color: #d97706; }
+    .card.slate { border-top-color: #475569; }
+
+    .card-icon { font-size: 36px; margin-bottom: 14px; }
+    .card-title { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+    .card-desc { font-size: 14px; color: #64748b; line-height: 1.5; flex-grow: 1; }
+    .card-arrow {
+      margin-top: 20px; font-size: 13px; font-weight: 600;
+      color: #94a3b8; align-self: flex-end;
+    }
+    .card:hover .card-arrow { color: #2563eb; }
+
+    .card.disabled {
+      opacity: 0.5; cursor: not-allowed;
+    }
+    .card.disabled:hover { transform: none; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+
+    .badge {
+      display: inline-block; font-size: 11px; font-weight: 700;
+      padding: 2px 8px; border-radius: 4px; margin-bottom: 12px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .badge.ready  { background: #dcfce7; color: #166534; }
+    .badge.soon   { background: #f1f5f9; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Configurateur</h1>
+      <p>Application métier locale — Gestion produits & documents</p>
+      <div class="version">V3.0</div>
+    </div>
+
+    <div class="stats-bar" id="stats-bar">
+      <div class="stat-pill"><strong id="stat-products">—</strong> produits</div>
+      <div class="stat-pill"><strong id="stat-clients">—</strong> clients</div>
+      <div class="stat-pill"><strong id="stat-documents">—</strong> documents</div>
+      <div class="stat-pill"><strong id="stat-drafts">—</strong> brouillons</div>
+    </div>
+
+    <div class="cards">
+      <a href="../configurateur/index.html" class="card blue">
+        <div class="badge ready">Prêt</div>
+        <div class="card-icon">🛋</div>
+        <div class="card-title">Configurateur</div>
+        <div class="card-desc">Composer un devis produit par produit — sélection gamme, modules, options.</div>
+        <div class="card-arrow">Ouvrir →</div>
+      </a>
+
+      <a href="../produits/index.html" class="card green">
+        <div class="badge ready">Prêt</div>
+        <div class="card-icon">📦</div>
+        <div class="card-title">Catalogue produits</div>
+        <div class="card-desc">Gérer les produits, gammes, modules et options du catalogue.</div>
+        <div class="card-arrow">Gérer →</div>
+      </a>
+
+      <a href="../documents/index.html" class="card amber">
+        <div class="badge ready">Prêt</div>
+        <div class="card-icon">📋</div>
+        <div class="card-title">Documents</div>
+        <div class="card-desc">Historique, suivi des statuts, duplication, transformation devis → commande.</div>
+        <div class="card-arrow">Consulter →</div>
+      </a>
+
+      <a href="../clients/index.html" class="card slate">
+        <div class="badge ready">Prêt</div>
+        <div class="card-icon">👥</div>
+        <div class="card-title">Clients</div>
+        <div class="card-desc">Base clients avec historique des documents associés.</div>
+        <div class="card-arrow">Consulter →</div>
+      </a>
+    </div>
+
+    <div style="text-align:center;margin-top:20px">
+      <a href="../parametres/index.html"
+        style="color:rgba(255,255,255,0.5);font-size:13px;text-decoration:none">
+        ⚙️ Paramètres &amp; Sauvegardes
+      </a>
+    </div>
+  </div>
+
+  <script src="./menu.js"></script>
+</body>
+</html>

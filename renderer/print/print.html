@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+  <title>Aperçu document</title>
+  <style>
+    /* ===== RESET ===== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --gold:   #b8956a;
+      --black:  #1a1a1a;
+      --gray:   #666;
+      --light:  #999;
+      --border: #e0e0e0;
+      --serif:  Georgia, 'Times New Roman', serif;
+      --sans:   -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    /* ===== PAGE ===== */
+    @page { size: A4; margin: 0; }
+
+    html, body {
+      width: 210mm;
+      background: #e8e8e8;
+      font-family: var(--sans);
+      color: var(--black);
+    }
+
+    /* ===== TOOLBAR ===== */
+    .toolbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 48px;
+      background: #1e3a5f;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 9999;
+      gap: 12px;
+    }
+    .toolbar-title {
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .toolbar-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .tbtn {
+      padding: 5px 14px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--sans);
+    }
+    .tbtn-pdf   { background: #f59e0b; color: #1a1a1a; }
+    .tbtn-print { background: white;   color: #1e3a5f; }
+    .tbtn-close { background: rgba(255,255,255,0.15); color: white; }
+    .tbtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    body { padding-top: 48px; }
+
+    @media print {
+      .toolbar { display: none !important; }
+      html, body { background: white; padding-top: 0; }
+    }
+
+    /* ===== DOCUMENT PAGE ===== */
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      background: white;
+      margin: 16px auto;
+      padding: 14mm 16mm 14mm;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.15);
+    }
+
+    @media print {
+      .page {
+        margin: 0;
+        box-shadow: none;
+        min-height: 297mm;
+      }
+    }
+
+    /* ===== HEADER ===== */
+    .doc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 7mm;
+      gap: 16px;
+    }
+
+    .hdr-left {}
+
+    .hdr-doc-type {
+      font-size: 8px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--light);
+      margin-bottom: 5px;
+    }
+
+    .hdr-product-name {
+      font-family: var(--serif);
+      font-size: 32px;
+      font-weight: 400;
+      letter-spacing: 0.01em;
+      line-height: 1;
+      color: var(--black);
+      margin-bottom: 5px;
+    }
+
+    .hdr-collection {
+      font-size: 8px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-bottom: 7px;
+    }
+
+    .hdr-badge {
+      display: inline-block;
+      border: 1px solid var(--black);
+      padding: 2px 9px;
+      font-size: 7.5px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--black);
+    }
+
+    .hdr-right {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .hdr-logo {
+      max-height: 96px;
+      max-width: 200px;
+      display: block;
+      margin-left: auto;
+      object-fit: contain;
+    }
+
+    .hdr-company-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--black);
+      text-align: right;
+    }
+
+    .hdr-doc-meta {
+      margin-top: 6px;
+    }
+
+    .hdr-doc-number {
+      font-size: 10.5px;
+      color: var(--gray);
+      margin-bottom: 2px;
+      letter-spacing: 0.03em;
+    }
+
+    .hdr-doc-date {
+      font-size: 10.5px;
+      color: var(--gray);
+    }
+
+    /* ===== SEPARATOR ===== */
+    .sep {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin-bottom: 6mm;
+    }
+
+    /* ===== COMPANY + CLIENT TWO-COLUMN ===== */
+    .company-client-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 20px;
+      margin-bottom: 6mm;
+    }
+
+    .col-company {}
+
+    .col-label {
+      font-size: 7.5px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .col-company-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--black);
+      margin-bottom: 3px;
+    }
+
+    .col-company-detail {
+      font-size: 9.5px;
+      color: var(--gray);
+      line-height: 1.65;
+    }
+
+    .col-client {
+      padding-left: 16px;
+      border-left: 2px solid var(--gold);
+    }
+
+    .col-client-header {
+      font-size: 8.5px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--light);
+      margin-bottom: 4px;
+    }
+
+    .col-client-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--black);
+      margin-bottom: 3px;
+    }
+
+    .col-client-detail {
+      font-size: 9.5px;
+      color: var(--gray);
+      line-height: 1.65;
+    }
+
+    /* ===== OPTIONS SUMMARY ===== */
+    .options-bar {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      padding: 5px 0;
+      margin-bottom: 5mm;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      font-size: 9.5px;
+    }
+
+    .opt-item-label {
+      font-size: 7.5px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-right: 4px;
+    }
+
+    .opt-item-value {
+      font-weight: 600;
+      color: var(--black);
+    }
+
+    /* ===== LINE ITEMS TABLE ===== */
+    .lines { flex: 1; }
+
+    .lines-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5px;
+    }
+
+    .lines-table thead tr {
+      border-bottom: 2px solid var(--black);
+    }
+
+    .lines-table thead th {
+      padding: 3px 6px 5px;
+      text-align: left;
+      font-size: 7.5px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gray);
+      font-weight: 600;
+    }
+
+    .lines-table thead th.th-num    { width: 28px; }
+    .lines-table thead th.th-qty    { width: 36px; text-align: center; }
+    .lines-table thead th.th-pu     { width: 72px; text-align: right; }
+    .lines-table thead th.th-tva    { width: 40px; text-align: center; }
+    .lines-table thead th.th-total  { width: 80px; text-align: right; }
+
+    .lines-table tbody tr:nth-child(odd) {
+      background: #fafafa;
+    }
+
+    .lines-table tbody tr:nth-child(even) {
+      background: white;
+    }
+
+    .lines-table tbody td {
+      padding: 3mm 6px;
+      vertical-align: middle;
+      border-bottom: 1px solid #e4e4e4;
+    }
+
+    .td-num {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 9.5px;
+      color: var(--gold);
+      white-space: nowrap;
+    }
+
+    .td-desig {
+      white-space: nowrap;
+      overflow: hidden;
+      max-width: 0;
+      width: 100%;
+    }
+
+    .desig-main {
+      font-family: var(--serif);
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--black);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .desig-option {
+      font-size: 10px;
+      color: var(--gray);
+      font-style: italic;
+    }
+
+    .td-qty {
+      text-align: center;
+      font-size: 10px;
+      color: var(--black);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .td-pu {
+      text-align: right;
+      font-size: 11px;
+      color: var(--black);
+      white-space: nowrap;
+    }
+
+    .td-pu-label {
+      font-size: 7px;
+      color: var(--light);
+      margin-left: 2px;
+    }
+
+    .td-tva {
+      text-align: center;
+      font-size: 9px;
+      color: var(--gray);
+      white-space: nowrap;
+    }
+
+    .td-total {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .td-total-ttc {
+      font-family: var(--serif);
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--black);
+    }
+
+    .td-total-label {
+      font-size: 7px;
+      color: var(--light);
+      margin-left: 2px;
+    }
+
+    /* ===== TOTALS ===== */
+    .total-section {
+      margin-top: 6mm;
+    }
+
+    .total-ht-rows {
+      margin-bottom: 3mm;
+    }
+
+    .total-ht-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9.5px;
+      color: var(--gray);
+      margin-bottom: 2px;
+    }
+
+    .total-main-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 4mm;
+    }
+
+    .total-main-label {
+      font-size: 8.5px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    .total-main-price {
+      display: flex;
+      align-items: baseline;
+      gap: 3px;
+    }
+
+    .total-sym {
+      font-family: var(--serif);
+      font-size: 14px;
+      color: var(--black);
+    }
+
+    .total-amt {
+      font-family: var(--serif);
+      font-size: 26px;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      color: var(--black);
+    }
+
+    .total-suffix {
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      color: var(--light);
+      align-self: flex-end;
+      padding-bottom: 2px;
+    }
+
+    .deposit-rows {
+      margin-top: 3mm;
+      padding-top: 3mm;
+      border-top: 1px solid var(--border);
+    }
+
+    .deposit-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 11px;
+      color: var(--gray);
+      margin-bottom: 3px;
+    }
+
+    .deposit-row-balance {
+      margin-top: 4px;
+      padding: 5px 10px;
+      border: 1.5px solid var(--gold);
+      border-radius: 3px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--black);
+    }
+
+    .deposit-row-balance .balance-label {
+      font-size: 8px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    .deposit-row-balance .balance-amount {
+      font-family: var(--serif);
+      font-size: 20px;
+      font-weight: 400;
+      color: var(--black);
+      letter-spacing: -0.01em;
+    }
+
+    .disclaimer {
+      margin-top: 4mm;
+      padding-left: 8px;
+      border-left: 2px solid #ebebeb;
+      font-size: 7.5px;
+      color: var(--light);
+      line-height: 1.7;
+      font-style: italic;
+    }
+
+    /* ===== SIGNATURE ===== */
+    .signature-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 1mm;
+    }
+
+    .signature-block {
+      width: 55mm;
+      text-align: center;
+    }
+
+    .signature-label {
+      font-size: 7.5px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 2px;
+    }
+
+    .signature-sublabel {
+      font-size: 7px;
+      color: var(--light);
+      font-style: italic;
+      margin-bottom: 14mm;
+    }
+
+    .signature-line {
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 3px;
+    }
+
+    .signature-name {
+      font-size: 8px;
+      color: var(--gray);
+      letter-spacing: 0.05em;
+    }
+
+    /* ===== FOOTER ===== */
+    .doc-footer {
+      margin-top: auto;
+      padding-top: 4mm;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .footer-tagline {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 13px;
+      color: var(--gray);
+    }
+
+    .footer-contact {
+      font-size: 7.5px;
+      color: var(--light);
+      text-align: right;
+      line-height: 1.7;
+    }
+
+    /* ===== LOADING ===== */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+      color: var(--gray);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <span class="toolbar-title" id="toolbar-title">Chargement…</span>
+    <div class="toolbar-actions">
+      <button class="tbtn tbtn-pdf"   id="btn-save-pdf">📄 Sauvegarder PDF</button>
+      <button class="tbtn tbtn-print" id="btn-print">🖨 Imprimer</button>
+      <button class="tbtn tbtn-close" id="btn-close">✕</button>
+    </div>
+  </div>
+
+  <!-- Document -->
+  <div class="page" id="doc-page">
+    <div class="loading" id="loading">Chargement du document…</div>
+  </div>
+
+  <script src="../../shared/utils.js"></script>
+  <script src="./print.js"></script>
+</body>
+</html>

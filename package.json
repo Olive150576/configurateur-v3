@@ -1,0 +1,23 @@
+{
+  "name": "configurateur-v3",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main/index.js",
+  "scripts": {
+    "start": "node start.js",
+    "dev": "node start.js --dev",
+    "rebuild": "electron-rebuild"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "electron": "^33.4.11",
+    "electron-rebuild": "^3.2.9"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.8.0"
+  }
+}

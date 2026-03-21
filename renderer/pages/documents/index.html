@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Documents — Configurateur V3</title>
+  <link rel="stylesheet" href="../../assets/styles/main.css">
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ==================== SIDEBAR ==================== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <a href="../menu/index.html" class="back-link">← Accueil</a>
+      <h2>📄 Documents</h2>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-title">Filtrer par statut</div>
+
+      <div class="sidebar-item active" data-status="">
+        <span class="icon">📋</span> Tous
+        <span id="count-all" class="badge badge-gray" style="margin-left:auto;font-size:11px;display:none"></span>
+      </div>
+      <div class="sidebar-item" data-status="draft">
+        <span class="icon">✏️</span> Brouillons
+        <span id="count-draft" class="badge badge-gray" style="margin-left:auto;font-size:11px;display:none"></span>
+      </div>
+      <div class="sidebar-item" data-status="validated">
+        <span class="icon">✓</span> Validés
+        <span id="count-validated" class="badge badge-primary" style="margin-left:auto;font-size:11px;display:none"></span>
+      </div>
+      <div class="sidebar-item" data-status="sent">
+        <span class="icon">📤</span> Envoyés
+        <span id="count-sent" class="badge badge-warning" style="margin-left:auto;font-size:11px;display:none"></span>
+      </div>
+      <div class="sidebar-item" data-status="ordered">
+        <span class="icon">✅</span> Commandés
+        <span id="count-ordered" class="badge badge-success" style="margin-left:auto;font-size:11px;display:none"></span>
+      </div>
+      <div class="sidebar-item" data-status="cancelled">
+        <span class="icon">✕</span> Annulés
+        <span id="count-cancelled" class="badge badge-danger" style="margin-left:auto;font-size:11px;display:none"></span>
+      </div>
+      <div class="sidebar-item" data-status="archived">
+        <span class="icon">🗄</span> Archivés
+        <span id="count-archived" class="badge badge-gray" style="margin-left:auto;font-size:11px;display:none"></span>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ==================== CONTENU PRINCIPAL ==================== -->
+  <div class="main-content">
+
+    <header class="page-header">
+      <h1 id="page-title">Tous les documents</h1>
+      <div class="header-actions">
+        <div class="search-wrapper">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" class="search-input"
+            placeholder="Numéro, client..." autocomplete="off">
+        </div>
+        <button class="btn btn-primary" id="btn-new-doc">+ Nouveau devis</button>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div id="toast-container"></div>
+
+      <!-- Filtres par type -->
+      <div class="tabs" style="margin-bottom:16px">
+        <button class="tab-btn active" data-type="">Tous types</button>
+        <button class="tab-btn" data-type="devis">Devis</button>
+        <button class="tab-btn" data-type="offre">Offres</button>
+        <button class="tab-btn" data-type="commande">Commandes</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-total">—</div>
+          <div class="stat-label">Documents actifs</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-drafts">—</div>
+          <div class="stat-label">Brouillons</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-active">—</div>
+          <div class="stat-label">Validés / Envoyés</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-revenue">—</div>
+          <div class="stat-label">CA commandé</div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Documents
+            <span id="doc-count" class="badge badge-gray" style="margin-left:8px">0</span>
+          </span>
+        </div>
+
+        <div id="doc-empty" class="empty-state" style="display:none">
+          <div class="empty-icon">📄</div>
+          <h3>Aucun document</h3>
+          <p>Créez votre premier devis pour commencer.</p>
+          <button class="btn btn-primary" id="btn-empty-new-doc">+ Nouveau devis</button>
+        </div>
+
+        <div class="table-wrapper" id="table-wrapper">
+          <table id="docs-table">
+            <thead>
+              <tr>
+                <th>N° / Référence</th>
+                <th style="text-align:center">Type</th>
+                <th>Client</th>
+                <th style="text-align:right">Total TTC</th>
+                <th style="text-align:center">Statut</th>
+                <th>Date</th>
+                <th style="text-align:right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="docs-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /page-body -->
+  </div><!-- /main-content -->
+</div><!-- /app-layout -->
+
+
+<!-- ==================== MODAL DOCUMENT ==================== -->
+<div id="modal-doc" class="modal-backdrop">
+  <div class="modal modal-xl" style="max-height:90vh;display:flex;flex-direction:column;">
+    <div class="modal-header" style="flex-shrink:0">
+      <h2 id="modal-doc-title">Nouveau devis</h2>
+      <button class="modal-close" data-close-modal="modal-doc">✕</button>
+    </div>
+
+    <div class="modal-body" style="flex:1;overflow:hidden;padding:0;display:flex;flex-direction:column;">
+
+      <!-- Erreur globale -->
+      <div id="modal-doc-error" class="alert alert-error"
+        style="display:none;margin:12px 16px 0;flex-shrink:0"></div>
+
+      <!-- Corps : 2 colonnes -->
+      <div style="display:grid;grid-template-columns:270px 1fr;flex:1;overflow:hidden;min-height:0">
+
+        <!-- Colonne gauche : infos & totaux -->
+        <div style="border-right:1px solid var(--color-gray-200);padding:16px;overflow-y:auto;
+                    background:var(--color-gray-50);display:flex;flex-direction:column;gap:0">
+
+          <!-- Type -->
+          <div class="form-group">
+            <label class="form-label required">Type de document</label>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+                <input type="radio" name="doc-type" value="devis" checked> Devis
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+                <input type="radio" name="doc-type" value="offre"> Offre
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+                <input type="radio" name="doc-type" value="commande"> Commande
+              </label>
+            </div>
+          </div>
+
+          <!-- Client -->
+          <div class="form-group">
+            <label class="form-label">Client</label>
+            <input type="text" id="f-client-search" class="form-control"
+              placeholder="Nom du client..." autocomplete="off" list="clients-datalist">
+            <datalist id="clients-datalist"></datalist>
+            <div id="selected-client-info" style="display:none;margin-top:6px;padding:6px 8px;
+              border-radius:4px;background:var(--color-primary-light);font-size:12px;
+              color:var(--color-primary-dark);line-height:1.4"></div>
+            <button class="btn btn-ghost btn-sm" id="btn-clear-client"
+              style="display:none;margin-top:4px;font-size:11px;padding:2px 6px">
+              ✕ Retirer le client
+            </button>
+          </div>
+
+          <!-- Notes -->
+          <div class="form-group" style="flex:1">
+            <label class="form-label">Notes / Conditions</label>
+            <textarea id="f-notes" class="form-control" rows="3"
+              placeholder="Conditions de paiement, délais..."></textarea>
+          </div>
+
+          <!-- Totaux résumé -->
+          <div style="border-top:1px solid var(--color-gray-200);padding-top:14px;margin-top:8px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;align-items:center">
+              <span style="font-size:13px;color:var(--color-gray-600)">Sous-total</span>
+              <span style="font-size:13px;font-weight:600" id="summary-subtotal">0,00 €</span>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;align-items:center">
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:13px;color:var(--color-gray-600)">Remise</span>
+                <input type="number" id="f-discount-pct" value="0" min="0" max="100" step="0.1"
+                  class="form-control"
+                  style="width:52px;padding:2px 6px;font-size:12px;height:24px;text-align:right">
+                <span style="font-size:12px;color:var(--color-gray-500)">%</span>
+              </div>
+              <span style="font-size:13px;color:var(--color-danger)" id="summary-discount">— 0,00 €</span>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;padding-top:8px;
+                        border-top:1px solid var(--color-gray-200);align-items:center">
+              <span style="font-size:14px;font-weight:700">Total TTC</span>
+              <span style="font-size:17px;font-weight:700;color:var(--color-primary)"
+                id="summary-total">0,00 €</span>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px;align-items:center">
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:13px;color:var(--color-gray-600)">Acompte</span>
+                <input type="number" id="f-deposit-pct" value="30" min="0" max="100" step="1"
+                  class="form-control"
+                  style="width:52px;padding:2px 6px;font-size:12px;height:24px;text-align:right">
+                <span style="font-size:12px;color:var(--color-gray-500)">%</span>
+              </div>
+              <span style="font-size:13px" id="summary-deposit">0,00 €</span>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:13px;color:var(--color-gray-600)">Solde</span>
+              <span style="font-size:13px;font-weight:600" id="summary-balance">0,00 €</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Colonne droite : lignes -->
+        <div style="padding:16px;display:flex;flex-direction:column;min-height:0">
+
+          <div style="display:flex;justify-content:space-between;align-items:center;
+                      margin-bottom:12px;flex-shrink:0">
+            <h3 style="font-size:14px;font-weight:600;color:var(--color-gray-700)">Lignes</h3>
+            <button class="btn btn-ghost btn-sm" id="btn-add-line">+ Ajouter une ligne</button>
+          </div>
+
+          <!-- Empty state lignes -->
+          <div id="lines-empty" style="flex:1;display:flex;align-items:center;justify-content:center;
+                                       text-align:center;color:var(--color-gray-400);font-size:13px">
+            Aucune ligne.<br>
+            <span style="font-size:12px">Cliquez sur "+ Ajouter une ligne" pour commencer.</span>
+          </div>
+
+          <!-- Table lignes -->
+          <div id="lines-table-wrapper" style="display:none;flex:1;overflow-y:auto;min-height:0">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead>
+                <tr style="border-bottom:2px solid var(--color-gray-200)">
+                  <th style="padding:6px 8px;text-align:left;font-weight:600;color:var(--color-gray-600)">Désignation</th>
+                  <th style="padding:6px 8px;text-align:center;width:56px;font-weight:600;color:var(--color-gray-600)">Qté</th>
+                  <th style="padding:6px 8px;text-align:right;width:100px;font-weight:600;color:var(--color-gray-600)">P.U. HT</th>
+                  <th style="padding:6px 8px;text-align:center;width:56px;font-weight:600;color:var(--color-gray-600)">Rem.</th>
+                  <th style="padding:6px 8px;text-align:right;width:100px;font-weight:600;color:var(--color-gray-600)">Total HT</th>
+                  <th style="width:60px"></th>
+                </tr>
+              </thead>
+              <tbody id="lines-tbody"></tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /modal-body -->
+
+    <div class="modal-footer" style="flex-shrink:0">
+      <button class="btn btn-ghost" data-close-modal="modal-doc">Annuler</button>
+      <button class="btn btn-primary" id="btn-save-doc">Enregistrer le brouillon</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ==================== MINI-MODAL LIGNE ==================== -->
+<div id="modal-line" class="modal-backdrop" style="z-index:1100">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h2 id="modal-line-title">Ajouter une ligne</h2>
+      <button class="modal-close" data-close-modal="modal-line">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label required">Désignation</label>
+        <input type="text" id="l-designation" class="form-control"
+          placeholder="ex: Canapé Modulable — Cuir premium" autocomplete="off">
+        <div class="form-error" id="err-l-designation">Désignation obligatoire</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description / Détails (optionnel)</label>
+        <textarea id="l-description" class="form-control" rows="2"
+          placeholder="Références, configurations..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label required">Quantité</label>
+          <input type="number" id="l-qty" class="form-control" value="1" min="0.01" step="1">
+          <div class="form-error" id="err-l-qty">Quantité invalide</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label required">Prix unitaire HT (€)</label>
+          <input type="number" id="l-unit-price" class="form-control" value="0" min="0" step="0.01">
+          <div class="form-error" id="err-l-unit-price">Prix invalide</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Remise sur ligne (%)</label>
+          <input type="number" id="l-disc-pct" class="form-control" value="0" min="0" max="100" step="0.1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Total ligne HT</label>
+          <div id="l-line-total"
+            style="font-size:18px;font-weight:700;color:var(--color-primary);padding:6px 0">
+            0,00 €
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close-modal="modal-line">Annuler</button>
+      <button class="btn btn-primary" id="btn-confirm-line">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ==================== MODAL CONFIRMATION ==================== -->
+<div id="modal-confirm" class="modal-backdrop" style="z-index:1200">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h2 id="confirm-title">Confirmation</h2>
+      <button class="modal-close" data-close-modal="modal-confirm">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-message" style="color:var(--color-gray-600);line-height:1.6"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close-modal="modal-confirm">Annuler</button>
+      <button class="btn btn-danger" id="btn-confirm-action">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+
+<script src="../../shared/utils.js"></script>
+<script src="./documents.js"></script>
+</body>
+</html>

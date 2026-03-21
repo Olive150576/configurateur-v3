@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Clients — Configurateur V3</title>
+  <link rel="stylesheet" href="../../assets/styles/main.css">
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ==================== SIDEBAR ==================== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <a href="../menu/index.html" class="back-link">← Accueil</a>
+      <h2>👥 Clients</h2>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-title">Catalogue</div>
+      <div class="sidebar-item active" data-view="list">
+        <span class="icon">📋</span> Liste clients
+      </div>
+      <div class="sidebar-section-title">Outils</div>
+      <div class="sidebar-item" data-view="import">
+        <span class="icon">📥</span> Importer JSON
+      </div>
+      <div class="sidebar-item" data-view="export">
+        <span class="icon">📤</span> Exporter JSON
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ==================== CONTENU PRINCIPAL ==================== -->
+  <div class="main-content">
+
+    <header class="page-header">
+      <h1 id="page-title">Clients</h1>
+      <div class="header-actions">
+        <div class="search-wrapper">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" class="search-input"
+            placeholder="Nom, email, entreprise..." autocomplete="off">
+        </div>
+        <button class="btn btn-primary" id="btn-new-client">+ Nouveau client</button>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div id="toast-container"></div>
+
+      <!-- ======= VUE LISTE ======= -->
+      <div id="view-list" class="view">
+
+        <!-- Stats -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-total">—</div>
+            <div class="stat-label">Total clients</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-companies">—</div>
+            <div class="stat-label">Entreprises</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-with-docs">—</div>
+            <div class="stat-label">Avec documents</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-this-month">—</div>
+            <div class="stat-label">Ajoutés ce mois</div>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Clients
+              <span id="client-count" class="badge badge-gray" style="margin-left:8px">0</span>
+            </span>
+          </div>
+
+          <div id="empty-state" class="empty-state" style="display:none">
+            <div class="empty-icon">👥</div>
+            <h3>Aucun client</h3>
+            <p>Commencez par créer votre premier client.</p>
+            <button class="btn btn-primary" id="btn-empty-new-client">+ Créer un client</button>
+          </div>
+
+          <div class="table-wrapper" id="table-wrapper">
+            <table id="clients-table">
+              <thead>
+                <tr>
+                  <th>Client</th>
+                  <th>Entreprise</th>
+                  <th>Email</th>
+                  <th>Téléphone</th>
+                  <th>Ville</th>
+                  <th style="text-align:right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="clients-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= VUE IMPORT ======= -->
+      <div id="view-import" class="view" style="display:none">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Importer des clients JSON</span></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">Fichier JSON (tableau de clients)</label>
+              <input type="file" id="import-file" accept=".json" class="form-control" style="padding:6px">
+            </div>
+            <button class="btn btn-primary" id="btn-import">Importer</button>
+            <div id="import-result" style="display:none;margin-top:16px" class="alert alert-success"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= VUE EXPORT ======= -->
+      <div id="view-export" class="view" style="display:none">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Exporter les clients</span></div>
+          <div class="card-body">
+            <p class="text-muted text-sm" style="margin-bottom:16px">
+              Export complet au format JSON.
+            </p>
+            <button class="btn btn-primary" id="btn-export-json">📥 Télécharger JSON</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ==================== MODAL CLIENT ==================== -->
+<div id="modal-client" class="modal-backdrop">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2 id="modal-client-title">Nouveau client</h2>
+      <button class="modal-close" data-close-modal="modal-client">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div id="modal-error" class="alert alert-error" style="display:none;margin-bottom:16px"></div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label required" for="f-name">Nom / Prénom</label>
+          <input type="text" id="f-name" class="form-control" placeholder="ex: Jean Dupont" autocomplete="off">
+          <div class="form-error" id="err-name">Nom obligatoire</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-company">Entreprise</label>
+          <input type="text" id="f-company" class="form-control" placeholder="ex: SARL Dupont" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="f-email">Email</label>
+          <input type="email" id="f-email" class="form-control" placeholder="ex: jean@example.com" autocomplete="off">
+          <div class="form-error" id="err-email">Email invalide</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-phone">Téléphone</label>
+          <input type="text" id="f-phone" class="form-control" placeholder="ex: 06 12 34 56 78" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="f-address">Adresse</label>
+        <input type="text" id="f-address" class="form-control" placeholder="ex: 12 rue de la Paix" autocomplete="off">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex:0 0 120px">
+          <label class="form-label" for="f-zip">Code postal</label>
+          <input type="text" id="f-zip" class="form-control" placeholder="75001" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-city">Ville</label>
+          <input type="text" id="f-city" class="form-control" placeholder="Paris" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="f-notes">Notes (optionnel)</label>
+        <textarea id="f-notes" class="form-control" rows="2" placeholder="Informations complémentaires..."></textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close-modal="modal-client">Annuler</button>
+      <button class="btn btn-primary" id="btn-save-client">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ==================== MODAL FICHE CLIENT ==================== -->
+<div id="modal-view" class="modal-backdrop">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h2 id="view-client-name">Fiche client</h2>
+      <button class="modal-close" data-close-modal="modal-view">✕</button>
+    </div>
+    <div class="modal-body" id="view-client-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close-modal="modal-view">Fermer</button>
+      <button class="btn btn-primary" id="btn-view-edit">Modifier</button>
+      <button class="btn btn-ghost" id="btn-view-new-doc">+ Nouveau devis</button>
+    </div>
+  </div>
+</div>
+
+
+<script src="../../shared/utils.js"></script>
+<script src="./clients.js"></script>
+</body>
+</html>

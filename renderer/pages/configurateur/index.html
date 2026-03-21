@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Configurateur — V3</title>
+  <link rel="stylesheet" href="../../assets/styles/main.css">
+  <style>
+    /* ===== Layout configurateur ===== */
+    body { overflow: hidden; }
+
+    .config-layout {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Header */
+    .config-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      height: 56px;
+      border-bottom: var(--border);
+      background: white;
+      flex-shrink: 0;
+    }
+    .config-header .divider {
+      width: 1px;
+      height: 28px;
+      background: var(--color-gray-200);
+    }
+    .config-header-title {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--color-gray-800);
+      white-space: nowrap;
+    }
+
+    /* Body */
+    .config-body {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ===== Panneau catalogue ===== */
+    .catalog-panel {
+      border-right: var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--color-gray-50);
+    }
+    .catalog-search {
+      padding: 10px 12px;
+      border-bottom: var(--border);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .catalog-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .catalog-empty {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--color-gray-400);
+      font-size: 13px;
+      padding: 24px;
+    }
+
+    /* Product card */
+    .product-card {
+      background: white;
+      border: 1px solid var(--color-gray-200);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      margin-bottom: 6px;
+      cursor: default;
+      transition: box-shadow var(--transition);
+    }
+    .product-card:hover { box-shadow: var(--shadow-sm); }
+    .product-card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .product-card-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-gray-800);
+      line-height: 1.3;
+    }
+    .product-card-meta {
+      font-size: 11px;
+      color: var(--color-gray-500);
+      margin-top: 2px;
+    }
+    .product-card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+    }
+    .product-card-price {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-primary);
+      white-space: nowrap;
+    }
+
+    /* ===== Panneau devis ===== */
+    .devis-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .devis-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: var(--border);
+      flex-shrink: 0;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--color-gray-700);
+    }
+    .devis-lines {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+    }
+    .devis-empty {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-gray-400);
+      text-align: center;
+      font-size: 13px;
+      gap: 8px;
+    }
+    .devis-empty .devis-empty-icon { font-size: 40px; }
+
+    /* Ligne devis */
+    .devis-line {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      background: white;
+      border: 1px solid var(--color-gray-200);
+      border-radius: var(--radius-md);
+      margin-bottom: 6px;
+    }
+    .devis-line-body { flex: 1; min-width: 0; }
+    .devis-line-name {
+      font-weight: 600;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .devis-line-desc {
+      font-size: 11px;
+      color: var(--color-gray-500);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .devis-line-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .devis-line-price {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--color-primary);
+      white-space: nowrap;
+    }
+    .devis-line-qty {
+      font-size: 11px;
+      color: var(--color-gray-500);
+    }
+
+    /* Footer totaux */
+    .devis-footer {
+      border-top: var(--border);
+      padding: 12px 16px;
+      flex-shrink: 0;
+      background: var(--color-gray-50);
+    }
+    .totals-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 5px 16px;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+    .totals-grid .label { color: var(--color-gray-600); }
+    .totals-grid .value { text-align: right; font-weight: 600; }
+    .totals-grid .main-row .label,
+    .totals-grid .main-row .value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--color-primary);
+      padding-top: 4px;
+      border-top: 1px solid var(--color-gray-200);
+    }
+    .totals-input-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .totals-input-row input {
+      width: 52px;
+      height: 22px;
+      padding: 2px 5px;
+      font-size: 12px;
+      text-align: right;
+    }
+
+    /* Configure modal */
+    .config-section { margin-bottom: 20px; }
+    .config-section-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-gray-500);
+      margin-bottom: 8px;
+    }
+    .range-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border: 1px solid var(--color-gray-200);
+      border-radius: var(--radius-sm);
+      margin-bottom: 4px;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    .range-option:hover { background: var(--color-gray-50); }
+    .range-option.selected {
+      border-color: var(--color-primary);
+      background: var(--color-primary-light);
+    }
+    .range-option input[type=radio] { cursor: pointer; }
+    .range-option-name { flex: 1; font-size: 13px; font-weight: 500; }
+    .range-option-price { font-size: 13px; font-weight: 600; color: var(--color-primary); }
+
+    .module-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 10px;
+      border: 1px solid var(--color-gray-200);
+      border-radius: var(--radius-sm);
+      margin-bottom: 4px;
+      transition: background var(--transition);
+    }
+    .module-row:hover { background: var(--color-gray-50); }
+    .module-row.selected { background: var(--color-success-light); border-color: var(--color-success); }
+    .module-row input[type=checkbox] { cursor: pointer; }
+    .module-row-name { flex: 1; font-size: 13px; }
+    .module-row-price { font-size: 13px; color: var(--color-gray-600); white-space: nowrap; }
+    .module-qty {
+      width: 52px;
+      height: 26px;
+      padding: 2px 6px;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .option-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 10px;
+      border: 1px solid var(--color-gray-200);
+      border-radius: var(--radius-sm);
+      margin-bottom: 4px;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    .option-row:hover { background: var(--color-gray-50); }
+    .option-row.selected { background: var(--color-success-light); border-color: var(--color-success); }
+    .option-row input[type=checkbox] { cursor: pointer; }
+    .option-row-name { flex: 1; font-size: 13px; }
+    .option-row-price { font-size: 13px; color: var(--color-gray-600); white-space: nowrap; }
+
+    .config-totals-bar {
+      background: white;
+      border: 1px solid var(--color-gray-200);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+    .config-total-item { text-align: center; }
+    .config-total-item .ct-label { color: var(--color-gray-500); margin-bottom: 2px; }
+    .config-total-item .ct-value { font-weight: 700; font-size: 14px; color: var(--color-gray-800); }
+    .config-total-item.main .ct-value { color: var(--color-primary); font-size: 16px; }
+  </style>
+</head>
+<body>
+
+<div class="config-layout">
+
+  <!-- ==================== HEADER ==================== -->
+  <header class="config-header">
+    <a href="../menu/index.html" class="back-link" style="white-space:nowrap">← Menu</a>
+    <div class="divider"></div>
+    <span class="config-header-title">🛋 Configurateur</span>
+    <div class="divider"></div>
+
+    <!-- Client -->
+    <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+      <label style="font-size:12px;color:var(--color-gray-500);white-space:nowrap">Client</label>
+      <input type="text" id="f-client" class="form-control"
+        placeholder="Sans client" list="clients-datalist" autocomplete="off"
+        style="width:180px">
+      <datalist id="clients-datalist"></datalist>
+    </div>
+
+    <!-- Type -->
+    <select id="f-doc-type" class="form-control" style="width:120px">
+      <option value="devis">Devis</option>
+      <option value="offre">Offre</option>
+      <option value="commande">Commande</option>
+    </select>
+
+    <div style="flex:1"></div>
+    <div id="toast-container"></div>
+
+    <!-- Actions -->
+    <button class="btn btn-ghost btn-sm" id="btn-preview" title="Aperçu PDF">👁 Aperçu</button>
+    <button class="btn btn-ghost btn-sm" id="btn-clear-all" title="Vider le devis">🗑 Tout effacer</button>
+    <button class="btn btn-primary" id="btn-save-draft">💾 Créer brouillon</button>
+    <button class="btn btn-success" id="btn-save-validate" style="background:var(--color-success)">
+      ✓ Valider
+    </button>
+  </header>
+
+  <!-- ==================== BODY ==================== -->
+  <div class="config-body">
+
+    <!-- ===== PANNEAU CATALOGUE ===== -->
+    <div class="catalog-panel">
+      <div class="catalog-search">
+        <div class="search-wrapper" style="width:100%">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="catalog-search" class="search-input"
+            placeholder="Rechercher un produit..." autocomplete="off">
+        </div>
+        <select id="catalog-supplier" class="form-control" style="font-size:12px">
+          <option value="">Tous les fournisseurs</option>
+        </select>
+      </div>
+
+      <div id="catalog-empty" class="catalog-empty" style="display:none">
+        Aucun produit actif.<br>Ajoutez des produits dans le catalogue.
+      </div>
+      <div id="catalog-list" class="catalog-list"></div>
+    </div>
+
+    <!-- ===== PANNEAU DEVIS ===== -->
+    <div class="devis-panel">
+      <div class="devis-header">
+        <span>Devis en cours</span>
+        <span id="devis-count" class="badge badge-gray">0 ligne</span>
+      </div>
+
+      <div class="devis-lines">
+        <div id="devis-empty" class="devis-empty">
+          <div class="devis-empty-icon">📋</div>
+          <p>Aucun produit configuré.<br>Cliquez sur <strong>+ Ajouter</strong> dans le catalogue.</p>
+        </div>
+        <div id="devis-lines-list"></div>
+      </div>
+
+      <!-- Footer totaux -->
+      <div class="devis-footer">
+
+        <!-- Livraison -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:10px;border-bottom:var(--border-color,#e2e8f0) 1px solid">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;white-space:nowrap;user-select:none">
+            <input type="checkbox" id="f-delivery-enabled">
+            🚚 Livraison
+          </label>
+          <div id="delivery-amount-wrap" style="display:none;align-items:center;gap:6px">
+            <input type="number" id="f-delivery-amount" class="form-control"
+              placeholder="Montant" min="0" step="10"
+              style="width:90px;font-size:13px">
+            <span style="font-size:12px;color:var(--color-gray-500)">€ TTC</span>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-bottom:10px">
+          <div class="form-group" style="flex:1;margin:0">
+            <textarea id="f-notes" class="form-control" rows="2"
+              placeholder="Notes, conditions..."></textarea>
+          </div>
+        </div>
+
+        <div class="totals-grid">
+          <div class="label">Sous-total HT</div>
+          <div class="value" id="dt-subtotal">0,00 €</div>
+
+          <div class="label">
+            <div class="totals-input-row">
+              Remise
+              <input type="number" id="f-discount" class="form-control"
+                value="0" min="0" max="100" step="0.1">
+              <span style="font-size:12px;color:var(--color-gray-500)">%</span>
+            </div>
+          </div>
+          <div class="value" id="dt-discount" style="color:var(--color-danger)">— 0,00 €</div>
+
+          <div class="label">Total HT</div>
+          <div class="value" id="dt-total">0,00 €</div>
+
+          <div class="label" id="dt-vat-label">TVA 20%</div>
+          <div class="value" id="dt-vat" style="color:var(--color-gray-500)">0,00 €</div>
+
+          <div class="label main-row">Total TTC</div>
+          <div class="value main-row" id="dt-ttc">0,00 €</div>
+
+          <div class="label">
+            <div class="totals-input-row">
+              Acompte
+              <input type="number" id="f-deposit" class="form-control"
+                value="30" min="0" max="100" step="1">
+              <span style="font-size:12px;color:var(--color-gray-500)">%</span>
+            </div>
+          </div>
+          <div class="value" id="dt-deposit">0,00 €</div>
+
+          <div class="label">Solde</div>
+          <div class="value" id="dt-balance">0,00 €</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /config-body -->
+</div><!-- /config-layout -->
+
+
+<!-- ==================== MODAL CONFIGURER PRODUIT ==================== -->
+<div id="modal-config" class="modal-backdrop" style="z-index:1100">
+  <div class="modal modal-lg"
+    style="max-height:88vh;display:flex;flex-direction:column">
+    <div class="modal-header" style="flex-shrink:0">
+      <div>
+        <h2 id="config-product-name">Configurer</h2>
+        <div id="config-product-meta" class="text-sm text-muted" style="margin-top:2px"></div>
+      </div>
+      <button class="modal-close" id="btn-close-config">✕</button>
+    </div>
+
+    <div class="modal-body" style="flex:1;overflow-y:auto">
+
+      <!-- GAMMES -->
+      <div class="config-section" id="section-ranges">
+        <div class="config-section-title">Gamme</div>
+        <div id="config-ranges"></div>
+      </div>
+
+      <!-- RÉFÉRENCE COLORIS -->
+      <div class="config-section" id="section-color-ref">
+        <div class="config-section-title">Référence coloris</div>
+        <input type="text" id="cfg-color-ref" class="form-control"
+          placeholder="ex : TAUPE 47, Cognac, Ref. 1234…"
+          style="max-width:320px">
+        <p class="text-sm text-muted" style="margin-top:4px">
+          Couleur ou référence tissu / cuir choisie par le client.
+        </p>
+      </div>
+
+      <!-- MODULES -->
+      <div class="config-section" id="section-modules">
+        <div class="config-section-title">Modules</div>
+        <div id="config-modules"></div>
+      </div>
+
+      <!-- OPTIONS -->
+      <div class="config-section" id="section-options" style="display:none">
+        <div class="config-section-title">Options / Finitions</div>
+        <div id="config-options"></div>
+      </div>
+
+    </div>
+
+    <!-- Footer modal : totaux + qty + boutons -->
+    <div style="flex-shrink:0;border-top:var(--border);padding:14px 20px;background:var(--color-gray-50)">
+      <div class="config-totals-bar" style="grid-template-columns:repeat(6,1fr)">
+        <div class="config-total-item">
+          <div class="ct-label">Base</div>
+          <div class="ct-value" id="ct-base">—</div>
+        </div>
+        <div class="config-total-item">
+          <div class="ct-label">Modules</div>
+          <div class="ct-value" id="ct-modules">—</div>
+        </div>
+        <div class="config-total-item">
+          <div class="ct-label">Options</div>
+          <div class="ct-value" id="ct-options">—</div>
+        </div>
+        <div class="config-total-item">
+          <div class="ct-label">Total HT</div>
+          <div class="ct-value" id="ct-unit-total">—</div>
+        </div>
+        <div class="config-total-item">
+          <div class="ct-label" id="ct-vat-label">TVA 20%</div>
+          <div class="ct-value" id="ct-vat">—</div>
+        </div>
+        <div class="config-total-item main">
+          <div class="ct-label">Total TTC</div>
+          <div class="ct-value" id="ct-ttc">—</div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:13px;color:var(--color-gray-600)">Quantité</label>
+          <input type="number" id="config-qty" value="1" min="1" step="1"
+            class="form-control" style="width:64px">
+          <span id="ct-qty-total" style="font-size:13px;font-weight:600;color:var(--color-gray-700)"></span>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" id="btn-cancel-config">Annuler</button>
+          <button class="btn btn-primary" id="btn-add-config">Ajouter au devis</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ==================== MODAL CONFIRMATION ==================== -->
+<div id="modal-confirm" class="modal-backdrop" style="z-index:1200">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h2 id="confirm-title">Confirmation</h2>
+      <button class="modal-close" id="btn-close-confirm">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-message" style="color:var(--color-gray-600);line-height:1.6"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btn-cancel-confirm">Annuler</button>
+      <button class="btn btn-primary" id="btn-ok-confirm">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+
+<script src="../../shared/utils.js"></script>
+<script src="./configurateur.js"></script>
+</body>
+</html>

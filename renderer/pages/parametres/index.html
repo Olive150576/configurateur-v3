@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+  <title>Paramètres — Configurateur V3</title>
+  <link rel="stylesheet" href="../../assets/styles/main.css">
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ==================== SIDEBAR ==================== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <a href="../menu/index.html" class="back-link">← Accueil</a>
+      <h2>⚙️ Paramètres</h2>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-title">Configuration</div>
+      <div class="sidebar-item active" data-view="company">
+        <span class="icon">🏢</span> Mon entreprise
+      </div>
+      <div class="sidebar-item" data-view="defaults">
+        <span class="icon">📐</span> Valeurs par défaut
+      </div>
+      <div class="sidebar-section-title">Données</div>
+      <div class="sidebar-item" data-view="backup">
+        <span class="icon">💾</span> Sauvegardes
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ==================== CONTENU PRINCIPAL ==================== -->
+  <div class="main-content">
+
+    <header class="page-header">
+      <h1 id="page-title">Mon entreprise</h1>
+    </header>
+
+    <div class="page-body">
+      <div id="toast-container"></div>
+
+      <!-- ======= VUE : MON ENTREPRISE ======= -->
+      <div id="view-company" class="view">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Informations entreprise</span>
+          </div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Raison sociale</label>
+                <input type="text" id="c-name" class="form-control"
+                  placeholder="ex: SARL Dupont Meubles">
+              </div>
+              <div class="form-group">
+                <label class="form-label">SIRET</label>
+                <input type="text" id="c-siret" class="form-control"
+                  placeholder="ex: 12345678900012">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Adresse</label>
+              <input type="text" id="c-address" class="form-control"
+                placeholder="ex: 12 rue du Commerce">
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex:0 0 120px">
+                <label class="form-label">Code postal</label>
+                <input type="text" id="c-zip" class="form-control" placeholder="75001">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Ville</label>
+                <input type="text" id="c-city" class="form-control" placeholder="Paris">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Téléphone</label>
+                <input type="text" id="c-phone" class="form-control"
+                  placeholder="ex: 01 23 45 67 89">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" id="c-email" class="form-control"
+                  placeholder="ex: contact@entreprise.fr">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">N° TVA intracommunautaire</label>
+                <input type="text" id="c-vat" class="form-control"
+                  placeholder="ex: FR12345678900">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Taux TVA (%)</label>
+                <input type="number" id="c-vat-rate" class="form-control"
+                  value="20" min="0" max="100" step="0.1">
+              </div>
+            </div>
+            <div class="form-group" style="margin-top:8px">
+              <button class="btn btn-primary" id="btn-save-company">Enregistrer</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logo entreprise -->
+        <div class="card" style="margin-top:16px">
+          <div class="card-header">
+            <span class="card-title">Logo de l'entreprise</span>
+          </div>
+          <div class="card-body">
+            <p class="text-sm text-muted" style="margin-bottom:16px">
+              Affiché sur les devis et commandes. Format recommandé&nbsp;: PNG ou SVG à fond transparent.
+            </p>
+
+            <!-- Prévisualisation -->
+            <div id="logo-preview-wrapper" style="display:none;margin-bottom:16px">
+              <div style="border:1px solid var(--color-border);border-radius:8px;padding:16px;
+                          display:inline-block;background:#f8fafc;min-width:180px;text-align:center">
+                <img id="logo-preview" style="max-height:80px;max-width:260px;display:block;margin:auto" alt="Logo entreprise">
+              </div>
+              <div style="margin-top:10px">
+                <button class="btn btn-ghost btn-sm" id="btn-delete-logo"
+                  style="color:var(--color-error)">🗑 Supprimer le logo</button>
+              </div>
+            </div>
+            <div id="logo-empty" style="margin-bottom:16px">
+              <p class="text-muted text-sm">Aucun logo défini.</p>
+            </div>
+
+            <label class="btn btn-ghost" style="cursor:pointer" for="logo-file-input">
+              📁 Choisir un fichier…
+            </label>
+            <input type="file" id="logo-file-input"
+              accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none">
+            <span class="text-sm text-muted" style="margin-left:8px">PNG, JPG ou SVG · max 2 Mo</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= VUE : VALEURS PAR DÉFAUT ======= -->
+      <div id="view-defaults" class="view" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Valeurs par défaut des documents</span>
+          </div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Remise par défaut (%)</label>
+                <input type="number" id="d-discount" class="form-control"
+                  value="0" min="0" max="100" step="0.1">
+                <p class="text-sm text-muted" style="margin-top:4px">
+                  Pré-remplie lors de la création d'un document.
+                </p>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Acompte par défaut (%)</label>
+                <input type="number" id="d-deposit" class="form-control"
+                  value="30" min="0" max="100" step="1">
+                <p class="text-sm text-muted" style="margin-top:4px">
+                  Pré-rempli lors de la création d'un document.
+                </p>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top:8px">
+              <button class="btn btn-primary" id="btn-save-defaults">Enregistrer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= VUE : SAUVEGARDES ======= -->
+      <div id="view-backup" class="view" style="display:none">
+
+        <!-- Créer une sauvegarde -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header">
+            <span class="card-title">Sauvegarde manuelle</span>
+          </div>
+          <div class="card-body">
+            <p class="text-sm text-muted" style="margin-bottom:12px">
+              Crée une copie horodatée de la base de données dans le dossier de données de l'application.
+              Les 30 dernières sauvegardes sont conservées automatiquement.
+            </p>
+            <button class="btn btn-primary" id="btn-backup-now">
+              💾 Sauvegarder maintenant
+            </button>
+            <span id="backup-status" style="margin-left:12px;font-size:13px;color:var(--color-success);display:none"></span>
+          </div>
+        </div>
+
+        <!-- Liste des sauvegardes -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Sauvegardes disponibles</span>
+            <button class="btn btn-ghost btn-sm" id="btn-refresh-backups">↻ Actualiser</button>
+          </div>
+          <div id="backups-empty" class="empty-state" style="display:none">
+            <div class="empty-icon">💾</div>
+            <h3>Aucune sauvegarde</h3>
+            <p>Cliquez sur "Sauvegarder maintenant" pour créer votre première sauvegarde.</p>
+          </div>
+          <div class="table-wrapper" id="backups-table-wrapper">
+            <table id="backups-table">
+              <thead>
+                <tr>
+                  <th>Fichier</th>
+                  <th>Date</th>
+                  <th style="text-align:right">Taille</th>
+                </tr>
+              </thead>
+              <tbody id="backups-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Info restauration -->
+        <div class="alert alert-warning" style="margin-top:16px;display:flex">
+          <strong style="margin-right:8px">ℹ️</strong>
+          Pour restaurer une sauvegarde, copiez le fichier <code>.db</code> souhaité
+          vers <code>%APPDATA%\configurateur-v3\configurateur.db</code> puis relancez l'application.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../../shared/utils.js"></script>
+<script src="./parametres.js"></script>
+</body>
+</html>
