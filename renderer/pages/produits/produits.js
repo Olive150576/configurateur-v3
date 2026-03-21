@@ -967,18 +967,23 @@ async function handleImport() {
     let imported = 0, errors = [];
 
     for (const p of products) {
-      // Normaliser le format V1/V2 vers V3
-      const normalized = normalizeProductFromV2(p);
-      const res = await window.api.products.create(normalized);
-      if (res.ok) imported++;
-      else errors.push(`${p.id || p.name}: ${res.error}`);
+      try {
+        // Normaliser le format V1/V2 vers V3
+        const normalized = normalizeProductFromV2(p);
+        const res = await window.api.products.create(normalized);
+        if (res.ok) imported++;
+        else errors.push(`${p.id || p.name}: ${res.error}`);
+      } catch (err) {
+        errors.push(`${p.id || p.name}: ${err.message}`);
+      }
     }
 
     const resultEl = document.getElementById('import-result');
     resultEl.className = errors.length ? 'alert alert-warning' : 'alert alert-success';
-    resultEl.textContent = `${imported} produit(s) importé(s).` +
-      (errors.length ? ` ${errors.length} erreur(s) : ${errors.slice(0,3).join(', ')}` : '');
-    resultEl.style.display = 'flex';
+    resultEl.innerHTML = `<strong>${imported} produit(s) importé(s).</strong>` +
+      (errors.length ? `<br><strong style="color:#b91c1c">${errors.length} erreur(s):</strong><ul style="margin:8px 0 0 20px">` + 
+        errors.map(e => `<li style="font-size:12px">${e}</li>`).join('') + `</ul>` : '');
+    resultEl.style.display = 'block';
 
     if (imported > 0) {
       Utils.toast(`${imported} produits importés`, 'success');
@@ -986,6 +991,7 @@ async function handleImport() {
     }
   } catch (e) {
     Utils.toast('Erreur de lecture du fichier: ' + e.message, 'error');
+    console.error('Import error:', e);
   }
 
   btn.disabled = false;

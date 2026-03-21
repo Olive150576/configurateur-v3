@@ -119,7 +119,6 @@ function renderDocument(doc, company, logo, vatRate) {
       ${renderLinesTable(lines, vatRate)}
     </div>
     ${renderTotals(doc, totalHT, vatAmt, totalTTC, vatRate)}
-    ${renderSignature()}
     ${renderFooter(company)}
   `;
 }
@@ -153,7 +152,6 @@ function renderHeader(doc, company, logo, info) {
 
   const leftHtml = `
     <div class="hdr-left">
-      <div class="hdr-doc-type">${typeStr}</div>
       <div class="hdr-product-name">${
         info.productName
           ? esc(info.productName)
@@ -172,6 +170,12 @@ function renderHeader(doc, company, logo, info) {
     </div>
   `;
 
+  const centerHtml = `
+    <div class="hdr-center">
+      <div class="doc-type-inner">${typeStr}</div>
+    </div>
+  `;
+
   const rightHtml = `
     <div class="hdr-right">
       ${logo
@@ -180,7 +184,7 @@ function renderHeader(doc, company, logo, info) {
     </div>
   `;
 
-  return `<div class="doc-header">${leftHtml}${rightHtml}</div>`;
+  return `<div class="doc-header">${leftHtml}${centerHtml}${rightHtml}</div>`;
 }
 
 // ==================== COMPANY + CLIENT (two-column) ====================
@@ -213,7 +217,8 @@ function renderCompanyClient(company, client) {
       <span class="col-label">Client</span>
       <div class="col-client-header">${esc(headerLine)}</div>
       ${subLine ? `<div class="col-client-name">${esc(subLine)}</div>` : ''}
-      ${client.city  ? `<div class="col-client-detail">${esc(client.city)}</div>`  : ''}
+      ${client.address ? `<div class="col-client-detail">${esc(client.address)}</div>` : ''}
+      ${(client.zip || client.city) ? `<div class="col-client-detail">${esc([client.zip, client.city].filter(Boolean).join(' '))}</div>` : ''}
       ${client.phone ? `<div class="col-client-detail">${esc(client.phone)}</div>` : ''}
       ${client.email ? `<div class="col-client-detail">${esc(client.email)}</div>` : ''}
       ${client.notes ? `<div class="col-client-detail" style="font-style:italic">${esc(client.notes)}</div>` : ''}
@@ -256,19 +261,23 @@ function renderLinesTable(lines, vatRate) {
 
     const colorRef = line.color_ref || '';
 
+    const productDesc = line.product_config?.product_description || '';
+
     if (modules.length > 0) {
       // Un article = un module → une ligne par module
-      modules.forEach(mod => {
-        rows.push(renderRow(idx++, mod.name, mod.qty || 1, mod.unit_price, vatRate, false, colorRef));
+      modules.forEach((mod, i) => {
+        // Description produit sur le 1er module uniquement
+        const extraDesc = i === 0 && productDesc ? productDesc : '';
+        rows.push(renderRow(idx++, mod.name, mod.qty || 1, mod.unit_price, vatRate, false, colorRef, mod.description || '', extraDesc));
       });
       // Options éventuelles (supplément)
       options.forEach(opt => {
-        rows.push(renderRow(idx++, opt.name, 1, opt.price, vatRate, true, ''));
+        rows.push(renderRow(idx++, opt.name, opt.qty || 1, opt.price, vatRate, true, '', opt.description || '', ''));
       });
     } else {
       // Pas de modules → la ligne entière
       const desig = (line.designation || '').replace(' — ', ' · ');
-      rows.push(renderRow(idx++, desig, line.qty || 1, line.unit_price ?? 0, vatRate, false, colorRef));
+      rows.push(renderRow(idx++, desig, line.qty || 1, line.unit_price ?? 0, vatRate, false, colorRef, '', productDesc));
     }
   });
 
@@ -289,7 +298,7 @@ function renderLinesTable(lines, vatRate) {
   `;
 }
 
-function renderRow(idx, name, qty, unitHT, vatRate, isOption = false, colorRef = '') {
+function renderRow(idx, name, qty, unitHT, vatRate, isOption = false, colorRef = '', modDescription = '', productDescription = '') {
   const num     = String(idx + 1).padStart(2, '0');
   const lineTTC = r2(unitHT * qty * (1 + vatRate / 100));
   const label   = isOption ? `+ ${name}` : name;
@@ -299,6 +308,8 @@ function renderRow(idx, name, qty, unitHT, vatRate, isOption = false, colorRef =
       <td class="td-num">${num}</td>
       <td class="td-desig">
         <div class="desig-main${isOption ? ' desig-option' : ''}">${esc(label)}</div>
+        ${modDescription ? `<div class="desig-detail">${esc(modDescription)}</div>` : ''}
+        ${productDescription ? `<div class="desig-product-desc">${esc(productDescription)}</div>` : ''}
         ${colorRef ? `<div class="desig-option" style="font-style:normal;color:var(--gold)">Réf. ${esc(colorRef)}</div>` : ''}
       </td>
       <td class="td-qty">${qty}</td>
@@ -365,22 +376,16 @@ function renderTotals(doc, totalHT, vatAmt, totalTTC, vatRate) {
         </div>
       ` : ''}
 
-      <div class="disclaimer">
-        Dimensions indicatives ± 2–3 cm · Sous réserve de disponibilité des coloris · Fabrication artisanale italienne
-      </div>
-    </div>
-  `;
-}
-
-// ==================== SIGNATURE ====================
-
-function renderSignature() {
-  return `
-    <div class="signature-row">
-      <div class="signature-block">
-        <div class="signature-label">Bon pour accord</div>
-        <div class="signature-sublabel">Date et signature du client</div>
-        <div class="signature-line"></div>
+      <div class="disclaimer-sig-row">
+        <div class="disclaimer">
+          Dimensions indicatives ± 2–3 cm · Sous réserve de disponibilité des coloris
+        </div>
+        <div class="signature-block">
+          <div class="signature-label">Bon pour accord</div>
+          <div class="signature-sublabel">Date et signature du client</div>
+          <div class="signature-line"></div>
+          <div class="signature-name">&nbsp;</div>
+        </div>
       </div>
     </div>
   `;
@@ -402,8 +407,7 @@ function renderFooter(company) {
 
   return `
     <div class="doc-footer">
-      <div class="footer-tagline">Votre intérieur, sublimé.</div>
-      <div class="footer-contact">
+      <div class="footer-contact-centered">
         ${contactParts.map(esc).join(' · ')}
         ${legalParts.length
           ? `<br>${legalParts.map(esc).join(' · ')}`
@@ -440,15 +444,11 @@ function docTypeLabel(type) {
 }
 
 function formatAmount(n) {
-  const rounded = Math.round(n);
-  if (Math.abs(n - rounded) < 0.005) {
-    return rounded.toLocaleString('fr-FR');
-  }
-  return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return Math.round(n || 0).toLocaleString('fr-FR');
 }
 
 function formatPrice(n) {
-  return (n || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return Math.round(n || 0).toLocaleString('fr-FR');
 }
 
 function showError(msg) {

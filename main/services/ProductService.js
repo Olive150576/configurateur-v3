@@ -104,29 +104,35 @@ function create(data) {
       data.supplier_notes?.trim() || ''
     );
 
-    // Gammes
+    // Gammes — toujours générer de nouveaux IDs pour éviter les conflits UNIQUE
+    const rangeIdMap = {};
     for (let i = 0; i < data.ranges.length; i++) {
       const r = data.ranges[i];
+      const newRangeId = generateId('range');
+      rangeIdMap[r.id] = newRangeId;
       db.prepare(`
         INSERT INTO ranges (id, product_id, name, base_price, sort_order)
         VALUES (?, ?, ?, ?, ?)
-      `).run(r.id || generateId('range'), id, r.name.trim(), r.base_price, i);
+      `).run(newRangeId, id, r.name.trim(), r.base_price, i);
     }
 
     // Modules
     for (let i = 0; i < data.modules.length; i++) {
       const m = data.modules[i];
-      const moduleId = m.id || generateId('mod');
+      const moduleId = generateId('mod');
       db.prepare(`
         INSERT INTO modules (id, product_id, name, description, sort_order)
         VALUES (?, ?, ?, ?, ?)
       `).run(moduleId, id, m.name.trim(), m.description?.trim() || '', i);
 
-      // Prix par gamme
-      for (const [rangeId, price] of Object.entries(m.prices || {})) {
-        db.prepare(`
-          INSERT INTO module_prices (module_id, range_id, price) VALUES (?, ?, ?)
-        `).run(moduleId, rangeId, price);
+      // Prix par gamme — utiliser le mapping pour les IDs de gammes
+      for (const [origRangeId, price] of Object.entries(m.prices || {})) {
+        const actualRangeId = rangeIdMap[origRangeId];
+        if (actualRangeId) {
+          db.prepare(`
+            INSERT INTO module_prices (module_id, range_id, price) VALUES (?, ?, ?)
+          `).run(moduleId, actualRangeId, price);
+        }
       }
     }
 
@@ -137,7 +143,7 @@ function create(data) {
         INSERT INTO options (id, product_id, name, description, price, type, sort_order)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `).run(
-        o.id || generateId('opt'), id,
+        generateId('opt'), id,
         o.name.trim(), o.description?.trim() || '',
         o.price, o.type || '', i
       );

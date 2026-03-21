@@ -130,7 +130,9 @@ function setupConfigModal() {
   // Event delegation — config options
   document.getElementById('config-options').addEventListener('change', e => {
     const cb = e.target.closest('input[data-action="toggle-option"]');
-    if (cb) handleOptionToggle(cb.dataset.optionId, cb.checked);
+    if (cb) { handleOptionToggle(cb.dataset.optionId, cb.checked); return; }
+    const qty = e.target.closest('input[data-action="option-qty"]');
+    if (qty) handleOptionQty(qty.dataset.optionId, qty.value);
   });
 
   // Référence coloris
@@ -285,7 +287,7 @@ function openConfigModal(productId, editingIdx = null) {
   });
   state.cfg.options = {};
   product.options.forEach(o => {
-    state.cfg.options[o.id] = existingCfg?.options?.some(eo => eo.id === o.id) ?? false;
+    state.cfg.options[o.id] = existingCfg?.options?.find(eo => eo.id === o.id)?.qty ?? 0;
   });
 
   document.getElementById('config-product-name').textContent = product.name;
@@ -410,23 +412,39 @@ function renderConfigOptions() {
   }
   section.style.display = 'block';
 
+  const coeff = state.cfg.product.purchase_coefficient ?? 2.0;
   container.innerHTML = options.map(o => {
-    const sel = state.cfg.options[o.id];
+    const qty     = state.cfg.options[o.id] || 0;
+    const sel     = qty > 0;
+    const pvPrice = round2(o.price * coeff);
     return `
-      <label class="option-row ${sel ? 'selected' : ''}" id="orow-${o.id}">
+      <div class="option-row ${sel ? 'selected' : ''}" id="orow-${o.id}">
         <input type="checkbox" ${sel ? 'checked' : ''}
           data-option-id="${o.id}" data-action="toggle-option">
         <span class="option-row-name">${Utils.escapeHtml(o.name)}</span>
-        <span class="option-row-price">+${Utils.formatPrice(o.price)}</span>
-      </label>
+        <span class="option-row-price">+${Utils.formatPrice(pvPrice)}</span>
+        <input type="number" class="module-qty" value="${qty || 1}"
+          min="1" step="1" style="${sel ? '' : 'visibility:hidden'}"
+          data-option-id="${o.id}" data-action="option-qty">
+      </div>
     `;
   }).join('');
 }
 
 function handleOptionToggle(optionId, checked) {
-  state.cfg.options[optionId] = checked;
+  state.cfg.options[optionId] = checked ? 1 : 0;
   const row = document.getElementById(`orow-${optionId}`);
-  if (row) row.classList.toggle('selected', checked);
+  if (row) {
+    row.classList.toggle('selected', checked);
+    const qtyInput = row.querySelector('.module-qty');
+    if (qtyInput) qtyInput.style.visibility = checked ? 'visible' : 'hidden';
+  }
+  recalcConfigTotal();
+}
+
+function handleOptionQty(optionId, val) {
+  const qty = Math.max(1, parseInt(val) || 1);
+  state.cfg.options[optionId] = qty;
   recalcConfigTotal();
 }
 
@@ -449,7 +467,8 @@ function recalcConfigTotal() {
 
   let optionsTotal = 0;
   state.cfg.product.options.forEach(o => {
-    if (state.cfg.options[o.id]) optionsTotal += o.price;
+    const qty = state.cfg.options[o.id] || 0;
+    if (qty > 0) optionsTotal += o.price * qty;
   });
 
   const coeff   = state.cfg.product.purchase_coefficient ?? 2.0;
@@ -492,23 +511,27 @@ function handleAddConfig() {
       const paPrice   = m.prices?.[state.cfg.rangeId] ?? 0;
       const sellPrice = round2(paPrice * coeff);
       const mQty      = state.cfg.modules[m.id].qty;
-      return { id: m.id, name: m.name, qty: mQty, unit_price: sellPrice, total: round2(sellPrice * mQty) };
+      return { id: m.id, name: m.name, description: m.description || '', qty: mQty, unit_price: sellPrice, total: round2(sellPrice * mQty) };
     });
 
-  // Options sélectionnées (prix = PA × coeff)
+  // Options sélectionnées (prix = PA × coeff, qty supportée)
   const selectedOptions = product.options
-    .filter(o => state.cfg.options[o.id])
-    .map(o => ({ id: o.id, name: o.name, price: round2(o.price * coeff) }));
+    .filter(o => (state.cfg.options[o.id] || 0) > 0)
+    .map(o => {
+      const oQty  = state.cfg.options[o.id];
+      const pvPrc = round2(o.price * coeff);
+      return { id: o.id, name: o.name, description: o.description || '', qty: oQty, price: pvPrc, total: round2(pvPrc * oQty) };
+    });
 
   const modulesTotal = selectedModules.reduce((s, m) => s + m.total, 0);
-  const optionsTotal = selectedOptions.reduce((s, o) => s + o.price, 0);
+  const optionsTotal = selectedOptions.reduce((s, o) => s + o.total, 0);
   const unitPrice    = applyRounding(round2(base * coeff) + modulesTotal + optionsTotal, mode);
   const lineTotal    = round2(unitPrice * qty);
 
   // Description textuelle
   const descParts = [
     ...selectedModules.map(m => `${m.qty > 1 ? m.qty + '× ' : ''}${m.name}`),
-    ...selectedOptions.map(o => o.name),
+    ...selectedOptions.map(o => `${o.qty > 1 ? o.qty + '× ' : ''}${o.name}`),
   ];
 
   const colorRef = document.getElementById('cfg-color-ref').value.trim();
@@ -525,10 +548,12 @@ function handleAddConfig() {
     discount_percent: 0,
     total:            lineTotal,
     product_config: {
-      product_id: product.id,
-      range_id:   state.cfg.rangeId,
-      modules:    selectedModules,
-      options:    selectedOptions,
+      product_id:          product.id,
+      range_id:            state.cfg.rangeId,
+      supplier_name:       product.supplier_name || '',
+      product_description: product.description  || '',
+      modules:             selectedModules,
+      options:             selectedOptions,
     },
   };
 

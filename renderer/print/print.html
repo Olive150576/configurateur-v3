@@ -133,19 +133,32 @@
     .doc-header {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
       margin-bottom: 7mm;
       gap: 16px;
     }
 
-    .hdr-left {}
+    .hdr-left { flex: 1; }
 
-    .hdr-doc-type {
-      font-size: 8px;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--light);
-      margin-bottom: 5px;
+    /* Bandeau type de document — centré, même hauteur que logo */
+    .hdr-center {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .doc-type-inner {
+      display: inline-block;
+      border: 2px solid var(--gold);
+      padding: 6px 20px;
+      font-family: var(--serif);
+      font-size: 20px;
+      font-style: italic;
+      letter-spacing: 0.08em;
+      color: var(--black);
+      font-weight: 400;
+      text-align: center;
     }
 
     .hdr-product-name {
@@ -230,7 +243,7 @@
     .col-company {}
 
     .col-label {
-      font-size: 7.5px;
+      font-size: 9px;
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--gold);
@@ -239,14 +252,14 @@
     }
 
     .col-company-name {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 700;
       color: var(--black);
       margin-bottom: 3px;
     }
 
     .col-company-detail {
-      font-size: 9.5px;
+      font-size: 11px;
       color: var(--gray);
       line-height: 1.65;
     }
@@ -257,7 +270,7 @@
     }
 
     .col-client-header {
-      font-size: 8.5px;
+      font-size: 10px;
       letter-spacing: 0.18em;
       text-transform: uppercase;
       color: var(--light);
@@ -265,14 +278,14 @@
     }
 
     .col-client-name {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 700;
       color: var(--black);
       margin-bottom: 3px;
     }
 
     .col-client-detail {
-      font-size: 9.5px;
+      font-size: 11px;
       color: var(--gray);
       line-height: 1.65;
     }
@@ -376,6 +389,22 @@
       font-style: italic;
     }
 
+    .desig-detail {
+      font-size: 9px;
+      color: var(--gray);
+      font-style: normal;
+      margin-top: 1px;
+    }
+
+    .desig-product-desc {
+      font-size: 8.5px;
+      color: var(--light);
+      font-style: italic;
+      margin-top: 2px;
+      border-left: 2px solid #ebebeb;
+      padding-left: 5px;
+    }
+
     .td-qty {
       text-align: center;
       font-size: 10px;
@@ -434,7 +463,7 @@
     .total-ht-row {
       display: flex;
       justify-content: space-between;
-      font-size: 9.5px;
+      font-size: 11px;
       color: var(--gray);
       margin-bottom: 2px;
     }
@@ -447,7 +476,7 @@
     }
 
     .total-main-label {
-      font-size: 8.5px;
+      font-size: 10px;
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--gold);
@@ -492,7 +521,7 @@
       display: flex;
       justify-content: space-between;
       align-items: baseline;
-      font-size: 11px;
+      font-size: 12px;
       color: var(--gray);
       margin-bottom: 3px;
     }
@@ -502,13 +531,13 @@
       padding: 5px 10px;
       border: 1.5px solid var(--gold);
       border-radius: 3px;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
       color: var(--black);
     }
 
     .deposit-row-balance .balance-label {
-      font-size: 8px;
+      font-size: 9px;
       letter-spacing: 0.18em;
       text-transform: uppercase;
       color: var(--gold);
@@ -516,31 +545,35 @@
 
     .deposit-row-balance .balance-amount {
       font-family: var(--serif);
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 400;
       color: var(--black);
       letter-spacing: -0.01em;
     }
 
-    .disclaimer {
+    /* ===== DISCLAIMER + SIGNATURE ROW ===== */
+    .disclaimer-sig-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
       margin-top: 4mm;
+      gap: 12mm;
+    }
+
+    .disclaimer {
+      flex: 1;
       padding-left: 8px;
       border-left: 2px solid #ebebeb;
       font-size: 7.5px;
       color: var(--light);
       line-height: 1.7;
       font-style: italic;
-    }
-
-    /* ===== SIGNATURE ===== */
-    .signature-row {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 1mm;
+      align-self: center;
     }
 
     .signature-block {
       width: 55mm;
+      flex-shrink: 0;
       text-align: center;
     }
 
@@ -575,22 +608,12 @@
       margin-top: auto;
       padding-top: 4mm;
       border-top: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
+      text-align: center;
     }
 
-    .footer-tagline {
-      font-family: var(--serif);
-      font-style: italic;
-      font-size: 13px;
-      color: var(--gray);
-    }
-
-    .footer-contact {
+    .footer-contact-centered {
       font-size: 7.5px;
       color: var(--light);
-      text-align: right;
       line-height: 1.7;
     }
 
