@@ -53,4 +53,33 @@ async function savePDF(win, defaultName) {
   return { saved: true, path: filePath };
 }
 
-module.exports = { openDocument, savePDF };
+/**
+ * Sauvegarde le PDF dans Documents/Devis/ puis ouvre le client mail
+ */
+async function saveAndEmail(win, opts = {}) {
+  const { defaultName = 'document.pdf', clientEmail = '', subject = '', body = '' } = opts;
+
+  // Dossier Documents/Devis/
+  const { app } = require('electron');
+  const devisDir = path.join(app.getPath('documents'), 'Devis');
+  if (!fs.existsSync(devisDir)) fs.mkdirSync(devisDir, { recursive: true });
+
+  const pdfPath = path.join(devisDir, defaultName);
+
+  const pdfBuffer = await win.webContents.printToPDF({
+    printBackground: true,
+    pageSize:        'A4',
+    margins:         { marginType: 'none' },
+    landscape:       false,
+  });
+
+  fs.writeFileSync(pdfPath, pdfBuffer);
+  shell.showItemInFolder(pdfPath);
+
+  const mailto = `mailto:${encodeURIComponent(clientEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  await shell.openExternal(mailto);
+
+  return { saved: true, path: pdfPath };
+}
+
+module.exports = { openDocument, savePDF, saveAndEmail };

@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const { app } = require('electron');
-const { backupDatabase, getDbPath } = require('../db/database');
+const { backupDatabase, getDbPath, getDb } = require('../db/database');
 
 function getBackupDir() {
   return path.join(app.getPath('userData'), 'backups');
@@ -58,4 +58,33 @@ function pruneOldBackups(maxCount) {
   }
 }
 
-module.exports = { backup, getBackups };
+/**
+ * Restaure une sauvegarde :
+ * 1. Crée une sauvegarde de sécurité
+ * 2. Ferme la base de données
+ * 3. Copie le fichier de sauvegarde sur la base active
+ * 4. Relance l'application
+ */
+async function restore(fileName) {
+  const dir      = getBackupDir();
+  const srcPath  = path.join(dir, fileName);
+
+  if (!fs.existsSync(srcPath)) throw new Error(`Sauvegarde introuvable : ${fileName}`);
+
+  // 1. Sauvegarde de sécurité avant restauration
+  await backup();
+
+  // 2. Fermer la base
+  const db = getDb();
+  db.close();
+
+  // 3. Copier le fichier
+  const destPath = getDbPath();
+  fs.copyFileSync(srcPath, destPath);
+
+  // 4. Relancer l'application
+  app.relaunch();
+  app.exit(0);
+}
+
+module.exports = { backup, getBackups, restore };

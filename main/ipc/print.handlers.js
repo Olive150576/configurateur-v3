@@ -16,6 +16,12 @@ function register(ipcMain) {
     const win = BrowserWindow.fromWebContents(event.sender);
     return wrap(() => PrintService.savePDF(win, defaultName));
   });
+
+  // Sauvegarde dans Documents/Devis/ et ouvre le client mail
+  ipcMain.handle('print:openEmail', (event, opts) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    return wrap(() => PrintService.saveAndEmail(win, opts));
+  });
 }
 
 module.exports = { register };

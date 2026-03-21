@@ -13,133 +13,231 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 100%);
       min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 20px;
+      padding: 28px 20px 40px;
     }
 
-    .container { max-width: 900px; width: 100%; }
+    .container { max-width: 1000px; margin: 0 auto; }
 
-    .header { text-align: center; color: white; margin-bottom: 50px; }
-    .header h1 { font-size: 42px; font-weight: 700; margin-bottom: 8px; }
-    .header p { font-size: 16px; opacity: 0.8; }
-    .version { display: inline-block; background: rgba(255,255,255,0.15);
-      padding: 4px 14px; border-radius: 20px; font-size: 13px;
-      margin-top: 10px; backdrop-filter: blur(10px); }
-
-    .stats-bar {
-      display: flex; gap: 20px; justify-content: center;
-      margin-bottom: 40px;
+    /* ===== HEADER ===== */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 28px;
     }
-    .stat-pill {
-      background: rgba(255,255,255,0.1); color: white;
-      padding: 8px 20px; border-radius: 30px; font-size: 14px;
+    .header-left h1 { font-size: 26px; font-weight: 700; color: white; }
+    .header-left p  { font-size: 13px; color: rgba(255,255,255,0.65); margin-top: 2px; }
+    .version {
+      background: rgba(255,255,255,0.15); color: white;
+      padding: 5px 14px; border-radius: 20px; font-size: 12px;
       backdrop-filter: blur(10px);
     }
-    .stat-pill strong { font-size: 18px; margin-right: 4px; }
 
-    .cards {
+    /* ===== KPI GRID ===== */
+    .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .kpi-card {
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(12px);
+      border-radius: 10px;
+      padding: 16px;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .kpi-label {
+      font-size: 11px; text-transform: uppercase;
+      letter-spacing: 0.08em; color: rgba(255,255,255,0.6);
+      margin-bottom: 6px;
+    }
+    .kpi-value {
+      font-size: 24px; font-weight: 700; line-height: 1;
+    }
+    .kpi-sub { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+    .kpi-card.highlight { background: rgba(245,158,11,0.25); border-color: rgba(245,158,11,0.4); }
+
+    /* ===== BODY GRID ===== */
+    .body-grid {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+      margin-bottom: 20px;
     }
 
-    .card {
-      background: white; border-radius: 12px; padding: 28px;
-      cursor: pointer; text-decoration: none; color: inherit;
-      display: flex; flex-direction: column;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-      transition: transform 0.2s, box-shadow 0.2s;
-      border-top: 4px solid transparent;
+    /* ===== PANEL ===== */
+    .panel {
+      background: white; border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+      overflow: hidden;
     }
-    .card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+    .panel-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 18px;
+      border-bottom: 1px solid #f0f0f0;
     }
-    .card.blue  { border-top-color: #2563eb; }
-    .card.green { border-top-color: #059669; }
-    .card.amber { border-top-color: #d97706; }
-    .card.slate { border-top-color: #475569; }
+    .panel-title { font-size: 13px; font-weight: 700; color: #1e293b; }
+    .panel-link {
+      font-size: 12px; color: #2563eb; text-decoration: none; font-weight: 500;
+    }
+    .panel-link:hover { text-decoration: underline; }
 
-    .card-icon { font-size: 36px; margin-bottom: 14px; }
-    .card-title { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
-    .card-desc { font-size: 14px; color: #64748b; line-height: 1.5; flex-grow: 1; }
-    .card-arrow {
-      margin-top: 20px; font-size: 13px; font-weight: 600;
-      color: #94a3b8; align-self: flex-end;
-    }
-    .card:hover .card-arrow { color: #2563eb; }
-
-    .card.disabled {
-      opacity: 0.5; cursor: not-allowed;
-    }
-    .card.disabled:hover { transform: none; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+    /* ===== RECENT DOCS TABLE ===== */
+    .doc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .doc-table td { padding: 10px 18px; border-bottom: 1px solid #f5f5f5; }
+    .doc-table tr:last-child td { border-bottom: none; }
+    .doc-table tr:hover td { background: #fafafa; }
+    .doc-num  { font-weight: 600; color: #1e293b; }
+    .doc-draft { color: #94a3b8; font-style: italic; font-size: 12px; }
+    .doc-client { color: #64748b; font-size: 12px; }
+    .doc-amount { text-align: right; font-weight: 600; color: #1e3a5f; white-space: nowrap; }
+    .doc-date   { color: #94a3b8; font-size: 11px; text-align: right; white-space: nowrap; }
 
     .badge {
-      display: inline-block; font-size: 11px; font-weight: 700;
-      padding: 2px 8px; border-radius: 4px; margin-bottom: 12px;
-      text-transform: uppercase; letter-spacing: 0.5px;
+      display: inline-block; font-size: 10px; font-weight: 700;
+      padding: 2px 7px; border-radius: 4px;
+      text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap;
     }
-    .badge.ready  { background: #dcfce7; color: #166534; }
-    .badge.soon   { background: #f1f5f9; color: #94a3b8; }
+    .badge-gray    { background: #f1f5f9; color: #64748b; }
+    .badge-primary { background: #dbeafe; color: #1d4ed8; }
+    .badge-warning { background: #fef3c7; color: #92400e; }
+    .badge-success { background: #d1fae5; color: #065f46; }
+    .badge-danger  { background: #fee2e2; color: #991b1b; }
+
+    /* ===== RECENT CLIENTS ===== */
+    .client-row { padding: 10px 18px; border-bottom: 1px solid #f5f5f5; }
+    .client-row:last-child { border-bottom: none; }
+    .client-row:hover { background: #fafafa; }
+    .client-name { font-size: 13px; font-weight: 600; color: #1e293b; }
+    .client-detail { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+
+    /* ===== NAV CARDS ===== */
+    .nav-cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .nav-card {
+      background: white; border-radius: 10px; padding: 20px 16px;
+      cursor: pointer; text-decoration: none; color: inherit;
+      display: flex; flex-direction: column; align-items: center;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      transition: transform 0.15s, box-shadow 0.15s;
+      border-top: 3px solid transparent;
+    }
+    .nav-card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.18); }
+    .nav-card.blue  { border-top-color: #2563eb; }
+    .nav-card.green { border-top-color: #059669; }
+    .nav-card.amber { border-top-color: #d97706; }
+    .nav-card.slate { border-top-color: #475569; }
+    .nav-icon  { font-size: 28px; margin-bottom: 10px; }
+    .nav-title { font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+    .nav-desc  { font-size: 11px; color: #64748b; line-height: 1.4; }
+
+    /* ===== FOOTER ===== */
+    .footer { text-align: center; margin-top: 16px; }
+    .footer a { color: rgba(255,255,255,0.45); font-size: 12px; text-decoration: none; }
+    .footer a:hover { color: rgba(255,255,255,0.7); }
+
+    /* ===== EMPTY / LOADING ===== */
+    .empty-row td { text-align: center; padding: 24px; color: #94a3b8; font-size: 13px; }
   </style>
 </head>
 <body>
   <div class="container">
+
+    <!-- Header -->
     <div class="header">
-      <h1>Configurateur</h1>
-      <p>Application métier locale — Gestion produits & documents</p>
+      <div class="header-left">
+        <h1>Configurateur</h1>
+        <p>Application métier locale — Gestion produits &amp; documents</p>
+      </div>
       <div class="version">V3.0</div>
     </div>
 
-    <div class="stats-bar" id="stats-bar">
-      <div class="stat-pill"><strong id="stat-products">—</strong> produits</div>
-      <div class="stat-pill"><strong id="stat-clients">—</strong> clients</div>
-      <div class="stat-pill"><strong id="stat-documents">—</strong> documents</div>
-      <div class="stat-pill"><strong id="stat-drafts">—</strong> brouillons</div>
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card highlight">
+        <div class="kpi-label">CA du mois</div>
+        <div class="kpi-value" id="kpi-revenue-month">—</div>
+        <div class="kpi-sub">commandes validées</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Devis en attente</div>
+        <div class="kpi-value" id="kpi-pending">—</div>
+        <div class="kpi-sub">validés / envoyés</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Commandes en cours</div>
+        <div class="kpi-value" id="kpi-orders">—</div>
+        <div class="kpi-sub">à livrer / facturer</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Brouillons</div>
+        <div class="kpi-value" id="kpi-drafts">—</div>
+        <div class="kpi-sub">à valider ou supprimer</div>
+      </div>
     </div>
 
-    <div class="cards">
-      <a href="../configurateur/index.html" class="card blue">
-        <div class="badge ready">Prêt</div>
-        <div class="card-icon">🛋</div>
-        <div class="card-title">Configurateur</div>
-        <div class="card-desc">Composer un devis produit par produit — sélection gamme, modules, options.</div>
-        <div class="card-arrow">Ouvrir →</div>
-      </a>
+    <!-- Body : activité + clients -->
+    <div class="body-grid">
 
-      <a href="../produits/index.html" class="card green">
-        <div class="badge ready">Prêt</div>
-        <div class="card-icon">📦</div>
-        <div class="card-title">Catalogue produits</div>
-        <div class="card-desc">Gérer les produits, gammes, modules et options du catalogue.</div>
-        <div class="card-arrow">Gérer →</div>
-      </a>
+      <!-- Activité récente -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Activité récente</span>
+          <a href="../documents/index.html" class="panel-link">Tous les documents →</a>
+        </div>
+        <table class="doc-table">
+          <tbody id="recent-docs">
+            <tr class="empty-row"><td colspan="5">Chargement…</td></tr>
+          </tbody>
+        </table>
+      </div>
 
-      <a href="../documents/index.html" class="card amber">
-        <div class="badge ready">Prêt</div>
-        <div class="card-icon">📋</div>
-        <div class="card-title">Documents</div>
-        <div class="card-desc">Historique, suivi des statuts, duplication, transformation devis → commande.</div>
-        <div class="card-arrow">Consulter →</div>
-      </a>
+      <!-- Clients récents -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Clients récents</span>
+          <a href="../clients/index.html" class="panel-link">Tous →</a>
+        </div>
+        <div id="recent-clients">
+          <div class="client-row"><div class="client-name" style="color:#94a3b8">Chargement…</div></div>
+        </div>
+      </div>
 
-      <a href="../clients/index.html" class="card slate">
-        <div class="badge ready">Prêt</div>
-        <div class="card-icon">👥</div>
-        <div class="card-title">Clients</div>
-        <div class="card-desc">Base clients avec historique des documents associés.</div>
-        <div class="card-arrow">Consulter →</div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-cards">
+      <a href="../configurateur/index.html" class="nav-card blue">
+        <div class="nav-icon">🛋</div>
+        <div class="nav-title">Configurateur</div>
+        <div class="nav-desc">Créer un devis produit par produit</div>
+      </a>
+      <a href="../produits/index.html" class="nav-card green">
+        <div class="nav-icon">📦</div>
+        <div class="nav-title">Catalogue</div>
+        <div class="nav-desc">Gérer produits, gammes et options</div>
+      </a>
+      <a href="../documents/index.html" class="nav-card amber">
+        <div class="nav-icon">📋</div>
+        <div class="nav-title">Documents</div>
+        <div class="nav-desc">Devis, commandes, suivi des statuts</div>
+      </a>
+      <a href="../clients/index.html" class="nav-card slate">
+        <div class="nav-icon">👥</div>
+        <div class="nav-title">Clients</div>
+        <div class="nav-desc">Base clients &amp; historique</div>
       </a>
     </div>
 
-    <div style="text-align:center;margin-top:20px">
-      <a href="../parametres/index.html"
-        style="color:rgba(255,255,255,0.5);font-size:13px;text-decoration:none">
-        ⚙️ Paramètres &amp; Sauvegardes
-      </a>
+    <!-- Footer -->
+    <div class="footer">
+      <a href="../parametres/index.html">⚙️ Paramètres &amp; Sauvegardes</a>
     </div>
+
   </div>
 
   <script src="./menu.js"></script>

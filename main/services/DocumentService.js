@@ -270,4 +270,16 @@ function duplicate(id) {
   return created;
 }
 
-module.exports = { getAll, getById, create, update, validate, transition, transform, duplicate };
+/**
+ * Supprime définitivement un document
+ */
+function remove(id) {
+  const doc = getById(id);
+  if (!doc) throw new ValidationError(`Document ${id} non trouvé`);
+  const db = getDb();
+  db.prepare('DELETE FROM documents WHERE id = ?').run(id);
+  log('document', id, 'deleted', { number: doc.number, type: doc.type });
+  return true;
+}
+
+module.exports = { getAll, getById, create, update, validate, transition, transform, duplicate, remove };

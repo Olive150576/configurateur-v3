@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
   <title>Catalogue Produits — Configurateur V3</title>
   <link rel="stylesheet" href="../../assets/styles/main.css">
 </head>
@@ -29,6 +29,9 @@
       <div class="sidebar-section-title">Outils</div>
       <div class="sidebar-item" data-view="import">
         <span class="icon">📥</span> Importer JSON
+      </div>
+      <div class="sidebar-item" data-view="import-csv">
+        <span class="icon">📊</span> Importer CSV
       </div>
       <div class="sidebar-item" data-view="export">
         <span class="icon">📤</span> Exporter JSON
@@ -102,6 +105,7 @@
               <thead>
                 <tr>
                   <th style="width:36px"></th>
+                  <th style="width:44px"></th>
                   <th>Produit</th>
                   <th>Fournisseur</th>
                   <th>Collection</th>
@@ -156,6 +160,29 @@
             </div>
             <button class="btn btn-primary" id="btn-import">Importer</button>
             <div id="import-result" style="display:none;margin-top:16px" class="alert alert-success"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= VUE : IMPORT CSV ======= -->
+      <div id="view-import-csv" class="view" style="display:none">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Importer des produits depuis un CSV fournisseur</span></div>
+          <div class="card-body">
+            <div class="alert" style="background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;margin-bottom:16px;display:flex;flex-direction:column;gap:8px;font-size:13px">
+              <strong>Format CSV attendu (1 ligne = 1 module × 1 gamme) :</strong>
+              <code style="font-size:11px;background:#dbeafe;padding:6px 10px;border-radius:4px;display:block">Produit,Collection,Fournisseur,Coeff,Gamme,Prix_Gamme,Module,Prix_Module<br>Canapé 3PL,Premium 2026,Fournisseur X,2.5,Tissu,0,Canapé 3 places,250<br>Canapé 3PL,Premium 2026,Fournisseur X,2.5,Cuir,0,Canapé 3 places,350</code>
+              <span>Plusieurs lignes avec le même nom de produit sont regroupées automatiquement.</span>
+            </div>
+            <div class="form-row" style="margin-bottom:12px">
+              <button class="btn btn-ghost btn-sm" id="btn-csv-template">⬇ Télécharger le modèle CSV</button>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Fichier CSV</label>
+              <input type="file" id="import-csv-file" accept=".csv" class="form-control" style="padding:6px">
+            </div>
+            <button class="btn btn-primary" id="btn-import-csv">Importer</button>
+            <div id="import-csv-result" style="display:none;margin-top:16px" class="alert alert-success"></div>
           </div>
         </div>
       </div>
@@ -251,6 +278,22 @@
           <label class="form-label" for="f-description">Description (optionnel)</label>
           <textarea id="f-description" class="form-control" rows="2"
             placeholder="Description du produit..."></textarea>
+        </div>
+        <div class="form-row" style="align-items:flex-start">
+          <div class="form-group" style="flex:0 0 140px">
+            <label class="form-label">Photo produit</label>
+            <div id="photo-preview-wrap" style="display:none;margin-bottom:8px">
+              <img id="photo-preview" style="width:120px;height:90px;object-fit:cover;border-radius:6px;border:1px solid var(--color-border)">
+              <div><button class="btn btn-ghost btn-sm" id="btn-delete-photo" style="color:var(--color-error);font-size:11px;margin-top:4px">🗑 Supprimer</button></div>
+            </div>
+            <label class="btn btn-ghost btn-sm" style="cursor:pointer" for="f-photo">📁 Choisir…</label>
+            <input type="file" id="f-photo" accept="image/png,image/jpeg,image/webp" style="display:none">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="f-supplier-notes">Notes fournisseur (interne)</label>
+            <textarea id="f-supplier-notes" class="form-control" rows="3"
+              placeholder="Délais, contact, conditions, remarques..."></textarea>
+          </div>
         </div>
         <div class="form-row" style="margin-top:4px;align-items:flex-start">
           <div class="form-group" style="flex:0 0 170px">

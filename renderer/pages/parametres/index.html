@@ -167,6 +167,14 @@
                 </p>
               </div>
             </div>
+            <div class="form-group">
+              <label class="form-label">Délai de relance (jours)</label>
+              <input type="number" id="d-alert-days" class="form-control"
+                value="15" min="1" max="365" step="1">
+              <p class="text-sm text-muted" style="margin-top:4px">
+                Un avertissement ⚠️ s'affiche sur les devis validés/envoyés depuis plus de X jours.
+              </p>
+            </div>
             <div class="form-group" style="margin-top:8px">
               <button class="btn btn-primary" id="btn-save-defaults">Enregistrer</button>
             </div>
@@ -212,6 +220,7 @@
                   <th>Fichier</th>
                   <th>Date</th>
                   <th style="text-align:right">Taille</th>
+                  <th style="text-align:right">Actions</th>
                 </tr>
               </thead>
               <tbody id="backups-tbody"></tbody>
@@ -221,12 +230,38 @@
 
         <!-- Info restauration -->
         <div class="alert alert-warning" style="margin-top:16px;display:flex">
-          <strong style="margin-right:8px">ℹ️</strong>
-          Pour restaurer une sauvegarde, copiez le fichier <code>.db</code> souhaité
-          vers <code>%APPDATA%\configurateur-v3\configurateur.db</code> puis relancez l'application.
+          <strong style="margin-right:8px">⚠️</strong>
+          La restauration remplace la base active et <strong>relance l'application</strong>.
+          Une sauvegarde de sécurité est créée automatiquement avant la restauration.
         </div>
       </div>
+    </div>
+  </div>
+</div>
 
+<!-- ==================== MODAL RESTAURATION ==================== -->
+<div id="modal-restore" class="modal-backdrop">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h2>Restaurer une sauvegarde</h2>
+      <button class="modal-close" id="btn-restore-cancel">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-warning" style="margin-bottom:16px;display:flex">
+        <strong style="margin-right:8px">⚠️</strong>
+        <div>
+          <div>Toutes les données actuelles seront <strong>remplacées</strong>.</div>
+          <div style="margin-top:4px;font-size:12px;color:var(--color-gray-500)">
+            Une sauvegarde de sécurité sera créée automatiquement avant la restauration.
+          </div>
+        </div>
+      </div>
+      <p style="font-size:13px">Fichier&nbsp;: <code id="restore-file-name" style="font-size:12px"></code></p>
+      <p style="font-size:13px;margin-top:8px">L'application va <strong>redémarrer</strong> automatiquement après la restauration.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btn-restore-cancel2">Annuler</button>
+      <button class="btn btn-primary" id="btn-restore-confirm" style="background:var(--color-error)">♻️ Restaurer et redémarrer</button>
     </div>
   </div>
 </div>

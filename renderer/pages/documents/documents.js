@@ -49,6 +49,8 @@ let state = {
 
 // ==================== INITIALISATION ====================
 
+let alertDays = 15;
+
 document.addEventListener('DOMContentLoaded', async () => {
   setupNav();
   setupTypeTabs();
@@ -56,8 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupDocModal();
   setupLineModal();
   setupConfirm();
-  await loadDocuments();
-  await loadClients();
+  await Promise.all([loadDocuments(), loadClients(), loadAlertDays()]);
 
   // Pré-sélection client depuis la page clients (query string ?client_id=...&client_name=...)
   const params = new URLSearchParams(window.location.search);
@@ -166,6 +167,7 @@ function setupDocModal() {
     if (action === 'archive')   archiveDocConfirm(id);
     if (action === 'duplicate') duplicateDoc(id);
     if (action === 'print')     printDoc(id);
+    if (action === 'delete')    deleteDocConfirm(id);
   });
 }
 
@@ -202,6 +204,11 @@ function setupConfirm() {
 }
 
 // ==================== CHARGEMENT DONNÉES ====================
+
+async function loadAlertDays() {
+  const res = await window.api.app.getConfig('alert_days');
+  if (res.ok && res.data) alertDays = parseInt(res.data) || 15;
+}
 
 async function loadDocuments() {
   const res = await window.api.documents.getAll({});
@@ -287,7 +294,9 @@ function renderDocumentsTable(docs) {
   wrapper.style.display = 'block';
 
   docs.forEach(doc => {
+    const overdue  = isOverdue(doc);
     const tr = document.createElement('tr');
+    if (overdue) tr.style.background = '#fff7ed';
     tr.innerHTML = `
       <td>
         ${doc.number
@@ -312,6 +321,7 @@ function renderDocumentsTable(docs) {
         <span class="badge ${STATUS_CLASSES[doc.status] ?? 'badge-gray'}">
           ${STATUS_LABELS[doc.status] ?? doc.status}
         </span>
+        ${overdue ? `<span title="En attente depuis plus de ${alertDays} jours" style="margin-left:4px;font-size:13px">⚠️</span>` : ''}
       </td>
       <td style="font-size:13px;color:var(--color-gray-600)">
         ${Utils.formatDate(doc.created_at)}
@@ -335,7 +345,7 @@ function renderDocActions(doc) {
     html += btn('✏️', 'Éditer', 'edit', id);
     html += btnLabel('Valider', 'validate', id, 'btn-primary');
     html += btn('📋', 'Dupliquer', 'duplicate', id);
-    html += btn('✕', 'Annuler', 'cancel', id, 'color:var(--color-danger)');
+    html += btn('🗑', 'Supprimer', 'delete', id, 'color:var(--color-danger)');
   }
   else if (doc.status === 'validated') {
     html += btnLabel('📤 Envoyé', 'sent', id, 'btn-ghost');
@@ -343,6 +353,7 @@ function renderDocActions(doc) {
       html += btnLabel('→ Commande', 'transform', id, 'btn-ghost');
     html += btn('📋', 'Dupliquer', 'duplicate', id);
     html += btn('🗄', 'Archiver', 'archive', id);
+    html += btn('🗑', 'Supprimer', 'delete', id, 'color:var(--color-danger)');
   }
   else if (doc.status === 'sent') {
     if (doc.type !== 'commande')
@@ -350,13 +361,16 @@ function renderDocActions(doc) {
     html += btn('📋', 'Dupliquer', 'duplicate', id);
     html += btn('🗄', 'Archiver', 'archive', id);
     html += btn('✕', 'Annuler', 'cancel', id, 'color:var(--color-danger)');
+    html += btn('🗑', 'Supprimer', 'delete', id, 'color:var(--color-danger)');
   }
   else if (['ordered', 'cancelled'].includes(doc.status)) {
     html += btn('📋', 'Dupliquer', 'duplicate', id);
     html += btn('🗄', 'Archiver', 'archive', id);
+    html += btn('🗑', 'Supprimer', 'delete', id, 'color:var(--color-danger)');
   }
   else if (doc.status === 'archived') {
     html += btn('📋', 'Dupliquer', 'duplicate', id);
+    html += btn('🗑', 'Supprimer', 'delete', id, 'color:var(--color-danger)');
   }
 
   html += '</div>';
@@ -379,7 +393,7 @@ function renderStats(docs) {
   const nonArchived = docs.filter(d => d.status !== 'archived');
   const drafts      = docs.filter(d => d.status === 'draft');
   const active      = docs.filter(d => ['validated','sent'].includes(d.status));
-  const revenue     = docs.filter(d => d.status === 'ordered')
+  const revenue     = docs.filter(d => d.status === 'ordered' && d.type === 'commande')
                           .reduce((s, d) => s + (d.total ?? 0), 0);
 
   document.getElementById('stat-total').textContent   = nonArchived.length;
@@ -577,6 +591,14 @@ function recalcTotals() {
   document.getElementById('summary-total').textContent    = Utils.formatPrice(total);
   document.getElementById('summary-deposit').textContent  = Utils.formatPrice(depositAmt);
   document.getElementById('summary-balance').textContent  = Utils.formatPrice(balance);
+}
+
+function isOverdue(doc) {
+  if (!['validated', 'sent'].includes(doc.status)) return false;
+  const ref = doc.validated_at || doc.created_at;
+  if (!ref) return false;
+  const days = Math.floor((Date.now() - new Date(ref).getTime()) / 86400000);
+  return days >= alertDays;
 }
 
 function round2(n) { return Math.round(n * 100) / 100; }
@@ -784,6 +806,25 @@ function archiveDocConfirm(docId) {
       const res = await window.api.documents.transition(docId, 'archived');
       if (!res.ok) { Utils.toast(res.error, 'error'); return; }
       Utils.toast('Document archivé', 'success');
+      await loadDocuments();
+    }
+  );
+}
+
+function deleteDocConfirm(docId) {
+  const doc  = state.allDocuments.find(d => d.id === docId);
+  const name = doc?.number ? `"${doc.number}"` : 'ce brouillon';
+  const warn = doc?.number
+    ? `⚠️ Supprimer définitivement ${name} ? Cette action est irréversible — le numéro ne sera pas réattribué.`
+    : `Supprimer définitivement ce brouillon ? Cette action est irréversible.`;
+
+  openConfirm(
+    'Supprimer le document',
+    warn,
+    async () => {
+      const res = await window.api.documents.delete(docId);
+      if (!res.ok) { Utils.toast(res.error, 'error'); return; }
+      Utils.toast('Document supprimé', 'success');
       await loadDocuments();
     }
   );

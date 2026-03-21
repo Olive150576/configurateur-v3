@@ -74,6 +74,26 @@ function setupToolbar(doc) {
     }
   });
 
+  document.getElementById('btn-email').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-email');
+    btn.disabled    = true;
+    btn.textContent = '⏳ Préparation…';
+    try {
+      const client  = doc.client_snapshot ?? {};
+      const subject = `${typeLabel} ${numLabel}`;
+      const body    = `Bonjour${client.name ? ' ' + client.name : ''},\n\nVeuillez trouver ci-joint votre ${typeLabel.toLowerCase()} n° ${numLabel}.\n\nCordialement`;
+      await window.api.print.openEmail({
+        defaultName:  fileName,
+        clientEmail:  client.email ?? '',
+        subject,
+        body,
+      });
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = '✉ Envoyer';
+    }
+  });
+
   document.getElementById('btn-print').addEventListener('click', () => window.print());
   document.getElementById('btn-close').addEventListener('click', () => window.close());
 }

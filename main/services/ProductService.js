@@ -89,8 +89,8 @@ function create(data) {
   const insert = db.transaction(() => {
     // Produit principal
     db.prepare(`
-      INSERT INTO products (id, name, supplier_id, collection, description, active, valid_from, valid_until, purchase_coefficient, price_rounding)
-      VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+      INSERT INTO products (id, name, supplier_id, collection, description, active, valid_from, valid_until, purchase_coefficient, price_rounding, photo, supplier_notes)
+      VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
     `).run(
       id, data.name.trim(),
       data.supplier_id || null,
@@ -99,7 +99,9 @@ function create(data) {
       data.valid_from || null,
       data.valid_until || null,
       data.purchase_coefficient ?? 2.0,
-      data.price_rounding ?? 'none'
+      data.price_rounding ?? 'none',
+      data.photo || '',
+      data.supplier_notes?.trim() || ''
     );
 
     // Gammes
@@ -164,6 +166,7 @@ function update(id, data) {
       UPDATE products SET
         name = ?, supplier_id = ?, collection = ?, description = ?,
         valid_from = ?, valid_until = ?, purchase_coefficient = ?, price_rounding = ?,
+        photo = ?, supplier_notes = ?,
         updated_at = datetime('now')
       WHERE id = ?
     `).run(
@@ -175,6 +178,8 @@ function update(id, data) {
       data.valid_until ?? existing.valid_until,
       data.purchase_coefficient ?? existing.purchase_coefficient ?? 2.0,
       data.price_rounding ?? existing.price_rounding ?? 'none',
+      data.photo ?? existing.photo ?? '',
+      data.supplier_notes?.trim() ?? existing.supplier_notes ?? '',
       id
     );
 

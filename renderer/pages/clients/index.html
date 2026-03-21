@@ -30,6 +30,12 @@
       <div class="sidebar-item" data-view="export">
         <span class="icon">📤</span> Exporter JSON
       </div>
+      <div class="sidebar-item" data-view="import-csv">
+        <span class="icon">📥</span> Importer CSV
+      </div>
+      <div class="sidebar-item" data-view="export-csv">
+        <span class="icon">📤</span> Exporter CSV
+      </div>
     </nav>
   </aside>
 
@@ -131,6 +137,38 @@
               Export complet au format JSON.
             </p>
             <button class="btn btn-primary" id="btn-export-json">📥 Télécharger JSON</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= VUE IMPORT CSV ======= -->
+      <div id="view-import-csv" class="view" style="display:none">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Importer des clients CSV</span></div>
+          <div class="card-body">
+            <p class="text-muted text-sm" style="margin-bottom:12px">
+              Le fichier CSV doit avoir une ligne d'en-tête avec les colonnes&nbsp;:
+              <code>name, company, email, phone, address, city, zip, notes</code>
+            </p>
+            <div class="form-group">
+              <label class="form-label">Fichier CSV</label>
+              <input type="file" id="import-csv-file" accept=".csv" class="form-control" style="padding:6px">
+            </div>
+            <button class="btn btn-primary" id="btn-import-csv">Importer</button>
+            <div id="import-csv-result" style="display:none;margin-top:16px" class="alert alert-success"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= VUE EXPORT CSV ======= -->
+      <div id="view-export-csv" class="view" style="display:none">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Exporter les clients en CSV</span></div>
+          <div class="card-body">
+            <p class="text-muted text-sm" style="margin-bottom:16px">
+              Export de tous les clients au format CSV (compatible Excel, LibreOffice Calc).
+            </p>
+            <button class="btn btn-primary" id="btn-export-csv">📥 Télécharger CSV</button>
           </div>
         </div>
       </div>

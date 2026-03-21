@@ -41,21 +41,25 @@ contextBridge.exposeInMainWorld('api', {
     transition: (id, to)    => ipcRenderer.invoke('documents:transition', id, to),
     transform:  (id, type)  => ipcRenderer.invoke('documents:transform', id, type),
     duplicate:  (id)        => ipcRenderer.invoke('documents:duplicate', id),
+    delete:     (id)        => ipcRenderer.invoke('documents:delete', id),
     print:      (id)        => ipcRenderer.invoke('documents:print', id),
   },
 
   // ==================== CLIENTS ====================
   clients: {
-    getAll:  ()          => ipcRenderer.invoke('clients:getAll'),
-    getById: (id)        => ipcRenderer.invoke('clients:getById', id),
-    create:  (data)      => ipcRenderer.invoke('clients:create', data),
-    update:  (id, data)  => ipcRenderer.invoke('clients:update', id, data),
-    search:  (term)      => ipcRenderer.invoke('clients:search', term),
+    getAll:    ()          => ipcRenderer.invoke('clients:getAll'),
+    getById:   (id)        => ipcRenderer.invoke('clients:getById', id),
+    create:    (data)      => ipcRenderer.invoke('clients:create', data),
+    update:    (id, data)  => ipcRenderer.invoke('clients:update', id, data),
+    search:    (term)      => ipcRenderer.invoke('clients:search', term),
+    exportCSV: ()          => ipcRenderer.invoke('clients:exportCSV'),
+    importCSV: (rows)      => ipcRenderer.invoke('clients:importCSV', rows),
   },
 
   // ==================== IMPRESSION ====================
   print: {
-    savePDF: (defaultName) => ipcRenderer.invoke('print:savePDF', defaultName),
+    savePDF:   (defaultName) => ipcRenderer.invoke('print:savePDF', defaultName),
+    openEmail: (opts)        => ipcRenderer.invoke('print:openEmail', opts),
   },
 
   // ==================== APP ====================
@@ -66,6 +70,7 @@ contextBridge.exposeInMainWorld('api', {
     getConfig:     (key)     => ipcRenderer.invoke('app:getConfig', key),
     setConfig:     (key, val)=> ipcRenderer.invoke('app:setConfig', key, val),
     getStats:      ()        => ipcRenderer.invoke('app:getStats'),
+    getDashboard:  ()        => ipcRenderer.invoke('app:getDashboard'),
     getLogo:       ()        => ipcRenderer.invoke('app:getConfig', 'company_logo'),
   },
 });

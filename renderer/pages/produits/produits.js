@@ -9,13 +9,14 @@
 
 let state = {
   products:       [],
-  editingId:      null,          // null = création, string = édition
+  editingId:      null,
   editingRanges:  [],
   editingModules: [],
   editingOptions: [],
-  editingRangeIdx:  null,        // index de la gamme en cours d'édition
+  editingRangeIdx:  null,
   editingModuleIdx: null,
   editingOptionIdx: null,
+  editingPhoto:     null,        // data URL ou '' pour supprimer
   confirmCallback:  null,
   currentView:    'list',
 };
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupProductModal();
   setupSubModals();
   setupImportExport();
+  setupPhotoUpload();
   await loadProducts();
   await loadSuppliers();
 });
@@ -175,6 +177,34 @@ function setupImportExport() {
     .addEventListener('click', handleImport);
   document.getElementById('btn-export-json')
     .addEventListener('click', handleExportJson);
+  document.getElementById('btn-import-csv')
+    .addEventListener('click', handleImportCsv);
+  document.getElementById('btn-csv-template')
+    .addEventListener('click', downloadCsvTemplate);
+}
+
+function setupPhotoUpload() {
+  const input = document.getElementById('f-photo');
+  input.addEventListener('change', () => {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      Utils.toast('Image trop volumineuse (max 2 Mo)', 'error');
+      input.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => {
+      state.editingPhoto = e.target.result;
+      showPhotoPreview(e.target.result);
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  });
+  document.getElementById('btn-delete-photo').addEventListener('click', () => {
+    state.editingPhoto = '';
+    document.getElementById('photo-preview-wrap').style.display = 'none';
+  });
 }
 
 // ==================== NAVIGATION VUES ====================
@@ -192,10 +222,11 @@ function switchView(view) {
   state.currentView = view;
 
   const titles = {
-    list:     'Catalogue produits',
-    archived: 'Produits archivés',
-    import:   'Importer un catalogue',
-    export:   'Exporter le catalogue',
+    list:         'Catalogue produits',
+    archived:     'Produits archivés',
+    import:       'Importer un catalogue',
+    'import-csv': 'Importer CSV fournisseur',
+    export:       'Exporter le catalogue',
   };
   document.getElementById('page-title').textContent = titles[view] || 'Produits';
 
@@ -293,6 +324,11 @@ function renderProductsTable(products) {
           <span class="toggle-slider"></span>
         </label>
       </td>
+      <td style="padding:4px 6px">
+        ${product.photo
+          ? `<img src="${product.photo}" style="width:36px;height:36px;object-fit:cover;border-radius:4px;border:1px solid var(--color-border)">`
+          : '<div style="width:36px;height:36px;background:#f1f5f9;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px">📦</div>'}
+      </td>
       <td>
         <div class="font-bold">${Utils.escapeHtml(product.name)}</div>
         <div class="text-xs text-muted">${Utils.escapeHtml(product.id)}</div>
@@ -364,8 +400,17 @@ function openProductModal(product = null) {
   document.getElementById('f-collection').value   = product?.collection  ?? '';
   document.getElementById('f-valid-from').value   = product?.valid_from  ?? '';
   document.getElementById('f-valid-until').value  = product?.valid_until ?? '';
-  document.getElementById('f-description').value  = product?.description ?? '';
-  document.getElementById('f-coefficient').value  = product?.purchase_coefficient ?? 2.0;
+  document.getElementById('f-description').value     = product?.description     ?? '';
+  document.getElementById('f-supplier-notes').value  = product?.supplier_notes  ?? '';
+  document.getElementById('f-coefficient').value     = product?.purchase_coefficient ?? 2.0;
+
+  // Photo
+  state.editingPhoto = product?.photo ?? '';
+  if (state.editingPhoto) {
+    showPhotoPreview(state.editingPhoto);
+  } else {
+    document.getElementById('photo-preview-wrap').style.display = 'none';
+  }
   const rounding = product?.price_rounding ?? 'none';
   document.querySelectorAll('input[name="price-rounding"]').forEach(radio => {
     radio.checked = radio.value === rounding;
@@ -441,13 +486,17 @@ async function handleSaveProduct() {
     if (supRes.ok && supRes.data) supplier_id = supRes.data.id;
   }
 
+  const supplier_notes = document.getElementById('f-supplier-notes').value.trim();
+
   const productData = {
     id, name, supplier_id,
     collection, description,
+    supplier_notes,
     purchase_coefficient,
     price_rounding,
     valid_from:  validFrom,
     valid_until: validUntil,
+    photo:   state.editingPhoto ?? '',
     ranges:  state.editingRanges,
     modules: state.editingModules,
     options: state.editingOptions,
@@ -998,6 +1047,147 @@ async function handleExportJson() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   Utils.toast('Export téléchargé', 'success');
+}
+
+// ==================== PHOTO ====================
+
+function showPhotoPreview(dataUrl) {
+  document.getElementById('photo-preview').src = dataUrl;
+  document.getElementById('photo-preview-wrap').style.display = 'block';
+}
+
+// ==================== IMPORT CSV FOURNISSEUR ====================
+
+function downloadCsvTemplate() {
+  const header = 'Produit,Collection,Fournisseur,Coeff,Gamme,Prix_Gamme,Module,Prix_Module';
+  const rows = [
+    'Canapé 3PL,Premium 2026,Fournisseur Exemple,2.5,Tissu,0,Canapé 3 places,250',
+    'Canapé 3PL,Premium 2026,Fournisseur Exemple,2.5,Cuir,0,Canapé 3 places,350',
+    'Canapé 3PL,Premium 2026,Fournisseur Exemple,2.5,Tissu,0,Canapé 2 places,200',
+    'Canapé 3PL,Premium 2026,Fournisseur Exemple,2.5,Cuir,0,Canapé 2 places,300',
+  ];
+  const csv  = [header, ...rows].join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'modele-produits.csv';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+async function handleImportCsv() {
+  const file = document.getElementById('import-csv-file').files[0];
+  if (!file) { Utils.toast('Sélectionnez un fichier CSV', 'warning'); return; }
+
+  const btn = document.getElementById('btn-import-csv');
+  btn.disabled = true; btn.textContent = 'Import en cours...';
+
+  try {
+    const text  = await file.text();
+    const products = parseCsvProducts(text.replace(/^\uFEFF/, ''));
+
+    let imported = 0, errors = [];
+    for (const p of products) {
+      let supplier_id = null;
+      if (p.supplierName) {
+        const sr = await window.api.suppliers.findOrCreate(p.supplierName);
+        if (sr.ok) supplier_id = sr.data.id;
+      }
+      const res = await window.api.products.create({ ...p, supplier_id });
+      if (res.ok) imported++;
+      else errors.push(`${p.name}: ${res.error}`);
+    }
+
+    const resultEl = document.getElementById('import-csv-result');
+    resultEl.className = errors.length ? 'alert alert-warning' : 'alert alert-success';
+    resultEl.textContent = `${imported} produit(s) importé(s).` +
+      (errors.length ? ` Erreurs : ${errors.slice(0,3).join(', ')}` : '');
+    resultEl.style.display = 'flex';
+
+    if (imported > 0) { Utils.toast(`${imported} produits importés`, 'success'); await loadProducts(); }
+  } catch (e) {
+    Utils.toast('Erreur CSV : ' + e.message, 'error');
+  }
+
+  btn.disabled = false; btn.textContent = 'Importer';
+}
+
+/**
+ * Parse un CSV fournisseur en objets produit V3.
+ * Format : Produit,Collection,Fournisseur,Coeff,Gamme,Prix_Gamme,Module,Prix_Module
+ * Plusieurs lignes avec le même Produit → même produit, gammes/modules fusionnés.
+ */
+function parseCsvProducts(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return [];
+
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  const idx = h => headers.indexOf(h);
+
+  const rows = lines.slice(1).map(line => {
+    const vals = splitCsvLine(line);
+    return {
+      produit:    vals[idx('Produit')]    ?? '',
+      collection: vals[idx('Collection')] ?? '',
+      fournisseur:vals[idx('Fournisseur')] ?? '',
+      coeff:      parseFloat(vals[idx('Coeff')]) || 2.0,
+      gamme:      vals[idx('Gamme')]      ?? '',
+      prixGamme:  parseFloat(vals[idx('Prix_Gamme')]) || 0,
+      module:     vals[idx('Module')]     ?? '',
+      prixModule: parseFloat(vals[idx('Prix_Module')]) || 0,
+    };
+  }).filter(r => r.produit && r.gamme && r.module);
+
+  const byProduct = {};
+  for (const row of rows) {
+    if (!byProduct[row.produit]) {
+      byProduct[row.produit] = {
+        id:           Utils.slugify(row.produit),
+        name:         row.produit,
+        collection:   row.collection,
+        supplierName: row.fournisseur,
+        purchase_coefficient: row.coeff,
+        price_rounding: 'none',
+        description:  '',
+        photo:        '',
+        supplier_notes: '',
+        ranges:  [],
+        modules: {},   // moduleId → { id, name, prices: { rangeId: price } }
+      };
+    }
+    const p = byProduct[row.produit];
+
+    // Ajouter la gamme si nouvelle
+    const rangeId = Utils.slugify(row.gamme) || `range_${p.ranges.length}`;
+    if (!p.ranges.find(r => r.id === rangeId)) {
+      p.ranges.push({ id: rangeId, name: row.gamme, base_price: row.prixGamme });
+    }
+
+    // Ajouter/enrichir le module
+    const modId = Utils.slugify(row.module) || `mod_${Object.keys(p.modules).length}`;
+    if (!p.modules[modId]) {
+      p.modules[modId] = { id: modId, name: row.module, description: '', prices: {} };
+    }
+    p.modules[modId].prices[rangeId] = row.prixModule;
+  }
+
+  return Object.values(byProduct).map(p => ({
+    ...p,
+    modules: Object.values(p.modules),
+    options: [],
+  }));
+}
+
+function splitCsvLine(line) {
+  const vals = []; let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+    else if (ch === ',' && !inQ) { vals.push(cur.trim()); cur = ''; }
+    else cur += ch;
+  }
+  vals.push(cur.trim());
+  return vals;
 }
 
 // ==================== HELPERS VALIDATION UI ====================

@@ -81,12 +81,14 @@ async function saveCompanySettings() {
 // ==================== VALEURS PAR DÉFAUT ====================
 
 async function loadDefaultSettings() {
-  const [discRes, depRes] = await Promise.all([
+  const [discRes, depRes, alertRes] = await Promise.all([
     window.api.app.getConfig('default_discount'),
     window.api.app.getConfig('default_deposit'),
+    window.api.app.getConfig('alert_days'),
   ]);
-  if (discRes.ok && discRes.data !== null) document.getElementById('d-discount').value = discRes.data;
-  if (depRes.ok  && depRes.data  !== null) document.getElementById('d-deposit').value  = depRes.data;
+  if (discRes.ok  && discRes.data  !== null) document.getElementById('d-discount').value   = discRes.data;
+  if (depRes.ok   && depRes.data   !== null) document.getElementById('d-deposit').value    = depRes.data;
+  if (alertRes.ok && alertRes.data !== null) document.getElementById('d-alert-days').value = alertRes.data;
 
   document.getElementById('btn-save-defaults').onclick = saveDefaultSettings;
 }
@@ -98,6 +100,7 @@ async function saveDefaultSettings() {
   await Promise.all([
     window.api.app.setConfig('default_discount', document.getElementById('d-discount').value),
     window.api.app.setConfig('default_deposit',  document.getElementById('d-deposit').value),
+    window.api.app.setConfig('alert_days',        document.getElementById('d-alert-days').value),
   ]);
 
   btn.disabled = false;
@@ -107,12 +110,41 @@ async function saveDefaultSettings() {
 // ==================== SAUVEGARDES ====================
 
 async function loadBackups() {
-  document.getElementById('btn-backup-now')
-    .addEventListener('click', handleBackupNow, { once: false });
   document.getElementById('btn-backup-now').onclick = handleBackupNow;
   document.getElementById('btn-refresh-backups').onclick = refreshBackups;
-
+  setupRestoreModal();
   await refreshBackups();
+}
+
+function setupRestoreModal() {
+  const modal = document.getElementById('modal-restore');
+  document.getElementById('btn-restore-cancel').onclick  = closeRestoreModal;
+  document.getElementById('btn-restore-cancel2').onclick = closeRestoreModal;
+  modal.addEventListener('click', e => { if (e.target === modal) closeRestoreModal(); });
+}
+
+function openRestoreModal(fileName) {
+  document.getElementById('restore-file-name').textContent = fileName;
+  document.getElementById('btn-restore-confirm').onclick = () => handleRestore(fileName);
+  document.getElementById('modal-restore').classList.add('show');
+}
+
+function closeRestoreModal() {
+  document.getElementById('modal-restore').classList.remove('show');
+}
+
+async function handleRestore(fileName) {
+  const btn = document.getElementById('btn-restore-confirm');
+  btn.disabled    = true;
+  btn.textContent = '⏳ Restauration…';
+  const res = await window.api.app.restore(fileName);
+  if (!res.ok) {
+    btn.disabled    = false;
+    btn.textContent = '♻️ Restaurer et redémarrer';
+    Utils.toast('Erreur restauration : ' + res.error, 'error');
+    closeRestoreModal();
+  }
+  // Si ok, l'app redémarre — pas besoin de gérer la suite
 }
 
 async function refreshBackups() {
@@ -142,6 +174,11 @@ function renderBackups(backups) {
       </td>
       <td style="font-size:13px">${Utils.formatDateTime(b.date)}</td>
       <td style="text-align:right;font-size:13px">${formatSize(b.size)}</td>
+      <td style="text-align:right">
+        <button class="btn btn-ghost btn-sm" onclick="openRestoreModal('${Utils.escapeHtml(b.name)}')">
+          ♻️ Restaurer
+        </button>
+      </td>
     </tr>
   `).join('');
 }

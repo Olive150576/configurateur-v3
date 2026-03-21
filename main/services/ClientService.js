@@ -82,4 +82,33 @@ function search(term) {
   `).all(like, like, like, like);
 }
 
-module.exports = { getAll, getById, create, update, search };
+/**
+ * Exporte tous les clients au format CSV (retourne la chaîne CSV)
+ */
+function exportCSV() {
+  const clients = getAll();
+  const headers = ['name','company','email','phone','address','city','zip','notes'];
+  const escape  = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const rows    = clients.map(c => headers.map(h => escape(c[h])).join(','));
+  return [headers.join(','), ...rows].join('\r\n');
+}
+
+/**
+ * Importe des clients depuis un tableau de lignes CSV parsées
+ * @param {Array<Object>} rows - tableau d'objets avec les champs clients
+ */
+function importCSV(rows) {
+  let imported = 0;
+  const errors = [];
+  for (const row of rows) {
+    try {
+      create(row);
+      imported++;
+    } catch (e) {
+      errors.push(`${row.name ?? '?'}: ${e.message}`);
+    }
+  }
+  return { imported, errors };
+}
+
+module.exports = { getAll, getById, create, update, search, exportCSV, importCSV };

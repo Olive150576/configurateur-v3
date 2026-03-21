@@ -14,6 +14,7 @@ function register(ipcMain) {
   ipcMain.handle('documents:transition', (_, id, to) => wrap(() => DocumentService.transition(id, to)));
   ipcMain.handle('documents:transform',  (_, id, type) => wrap(() => DocumentService.transform(id, type)));
   ipcMain.handle('documents:duplicate',  (_, id) => wrap(() => DocumentService.duplicate(id)));
+  ipcMain.handle('documents:delete',     (_, id) => wrap(() => DocumentService.remove(id)));
 }
 
 module.exports = { register };
