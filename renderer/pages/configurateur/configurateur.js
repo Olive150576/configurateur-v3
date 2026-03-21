@@ -84,6 +84,15 @@ function setupHeader() {
   // Client autocomplete
   document.getElementById('f-client').addEventListener('input', handleClientInput);
 
+  // Nouveau client
+  document.getElementById('btn-new-client').addEventListener('click', openNewClientModal);
+  document.getElementById('btn-close-new-client').addEventListener('click', closeNewClientModal);
+  document.getElementById('btn-cancel-new-client').addEventListener('click', closeNewClientModal);
+  document.getElementById('btn-save-new-client').addEventListener('click', handleSaveNewClient);
+  document.getElementById('modal-new-client').addEventListener('click', e => {
+    if (e.target.id === 'modal-new-client') closeNewClientModal();
+  });
+
   // Event delegation — catalog list
   document.getElementById('catalog-list').addEventListener('click', e => {
     const btn = e.target.closest('button[data-action="add-product"]');
@@ -265,6 +274,54 @@ function handleClientInput() {
   }
 }
 
+// ==================== NOUVEAU CLIENT ====================
+
+function openNewClientModal() {
+  ['nc-name','nc-company','nc-email','nc-phone','nc-address','nc-zip','nc-city']
+    .forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('modal-new-client').classList.add('show');
+  document.getElementById('nc-name').focus();
+}
+
+function closeNewClientModal() {
+  document.getElementById('modal-new-client').classList.remove('show');
+}
+
+async function handleSaveNewClient() {
+  const name = document.getElementById('nc-name').value.trim();
+  if (!name) { Utils.toast('Le nom est obligatoire', 'error'); return; }
+
+  const data = {
+    name,
+    company:  document.getElementById('nc-company').value.trim(),
+    email:    document.getElementById('nc-email').value.trim(),
+    phone:    document.getElementById('nc-phone').value.trim(),
+    address:  document.getElementById('nc-address').value.trim(),
+    zip:      document.getElementById('nc-zip').value.trim(),
+    city:     document.getElementById('nc-city').value.trim(),
+  };
+
+  const res = await window.api.clients.create(data);
+  if (!res.ok) { Utils.toast('Erreur : ' + res.error, 'error'); return; }
+
+  // Recharger la liste clients et sélectionner le nouveau
+  await loadClients();
+  const newClient = state.clients.find(c => c.id === res.data.id) ||
+                    state.clients.find(c => c.name === name);
+  if (newClient) {
+    state.selectedClient = {
+      id: newClient.id, name: newClient.name, email: newClient.email,
+      phone: newClient.phone, company: newClient.company,
+      address: newClient.address, city: newClient.city, zip: newClient.zip,
+    };
+    const label = newClient.company ? `${newClient.name} (${newClient.company})` : newClient.name;
+    document.getElementById('f-client').value = label;
+  }
+
+  Utils.toast(`Client "${name}" créé`, 'success');
+  closeNewClientModal();
+}
+
 // ==================== MODAL CONFIGURATION ====================
 
 function openConfigModal(productId, editingIdx = null) {
@@ -331,7 +388,6 @@ function renderConfigRanges() {
       <span class="range-option-name">${Utils.escapeHtml(r.name)}</span>
       <div style="text-align:right">
         <span class="range-option-price">${Utils.formatPrice(sellPrice)}</span>
-        ${coeff !== 1 ? `<div style="font-size:11px;color:#94a3b8">PA ${Utils.formatPrice(r.base_price)}</div>` : ''}
       </div>
     </label>
     `;
@@ -372,7 +428,6 @@ function renderConfigModules() {
         <span class="module-row-name">${Utils.escapeHtml(m.name)}</span>
         <div class="module-row-price" style="text-align:right">
           <div>${Utils.formatPrice(sellPrice)}</div>
-          ${coeff !== 1 ? `<div style="font-size:11px;color:#94a3b8">PA ${Utils.formatPrice(paPrice)}</div>` : ''}
         </div>
         <input type="number" class="form-control module-qty" value="${ms.qty}"
           min="1" step="1" style="${ms.selected ? '' : 'visibility:hidden'}"
@@ -412,6 +467,15 @@ function renderConfigOptions() {
   }
   section.style.display = 'block';
 
+  // Mettre à jour le badge de comptage
+  const badge = document.getElementById('options-count-badge');
+  if (badge) {
+    const selCount = options.filter(o => (state.cfg.options[o.id] || 0) > 0).length;
+    badge.textContent = selCount > 0 ? `${selCount}/${options.length} sélectionnée${selCount > 1 ? 's' : ''}` : `${options.length} disponible${options.length > 1 ? 's' : ''}`;
+    badge.style.background = selCount > 0 ? '#dcfce7' : '';
+    badge.style.color = selCount > 0 ? '#16a34a' : '';
+  }
+
   const coeff = state.cfg.product.purchase_coefficient ?? 2.0;
   container.innerHTML = options.map(o => {
     const qty     = state.cfg.options[o.id] || 0;
@@ -439,7 +503,18 @@ function handleOptionToggle(optionId, checked) {
     const qtyInput = row.querySelector('.module-qty');
     if (qtyInput) qtyInput.style.visibility = checked ? 'visible' : 'hidden';
   }
+  updateOptionsBadge();
   recalcConfigTotal();
+}
+
+function updateOptionsBadge() {
+  const options = state.cfg.product?.options ?? [];
+  const badge = document.getElementById('options-count-badge');
+  if (!badge || !options.length) return;
+  const selCount = options.filter(o => (state.cfg.options[o.id] || 0) > 0).length;
+  badge.textContent = selCount > 0 ? `${selCount}/${options.length} sélectionnée${selCount > 1 ? 's' : ''}` : `${options.length} disponible${options.length > 1 ? 's' : ''}`;
+  badge.style.background = selCount > 0 ? '#dcfce7' : '';
+  badge.style.color = selCount > 0 ? '#16a34a' : '';
 }
 
 function handleOptionQty(optionId, val) {
@@ -511,7 +586,7 @@ function handleAddConfig() {
       const paPrice   = m.prices?.[state.cfg.rangeId] ?? 0;
       const sellPrice = round2(paPrice * coeff);
       const mQty      = state.cfg.modules[m.id].qty;
-      return { id: m.id, name: m.name, description: m.description || '', qty: mQty, unit_price: sellPrice, total: round2(sellPrice * mQty) };
+      return { id: m.id, name: m.name, description: m.description || '', dimensions: m.dimensions || '', qty: mQty, unit_price: sellPrice, total: round2(sellPrice * mQty) };
     });
 
   // Options sélectionnées (prix = PA × coeff, qty supportée)
@@ -585,7 +660,17 @@ function renderDevisLines() {
   }
   emptyEl.style.display = 'none';
 
-  const productRows = state.devisLines.map((line, idx) => `
+  const productRows = state.devisLines.map((line, idx) => {
+    const opts = line.product_config?.options ?? [];
+    const optBadges = opts.length
+      ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:5px">
+          ${opts.map(o => `
+            <span style="display:inline-flex;align-items:center;gap:3px;background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:1px 7px;font-size:11px;color:#16a34a;white-space:nowrap">
+              ＋ ${Utils.escapeHtml(o.name)}${o.qty > 1 ? ` ×${o.qty}` : ''}
+            </span>`).join('')}
+        </div>`
+      : '';
+    return `
     <div class="devis-line">
       <div class="devis-line-body">
         <div class="devis-line-name">${Utils.escapeHtml(line.designation)}</div>
@@ -595,16 +680,17 @@ function renderDevisLines() {
         ${line.color_ref
           ? `<div class="devis-line-desc" style="color:var(--color-primary)">🎨 ${Utils.escapeHtml(line.color_ref)}</div>`
           : ''}
+        ${optBadges}
       </div>
       <div class="devis-line-right">
         <div class="devis-line-price">${Utils.formatPrice(line.total)}</div>
         ${line.qty > 1
           ? `<div class="devis-line-qty">${line.qty} × ${Utils.formatPrice(line.unit_price)}</div>`
           : ''}
-        <div class="flex gap-1">
+        <div class="flex gap-1" style="margin-top:4px">
           ${line.product_config
-            ? `<button class="btn btn-ghost btn-sm btn-icon" title="Modifier"
-                data-action="edit-line" data-product-id="${line.product_config.product_id}" data-idx="${idx}">✏️</button>`
+            ? `<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 8px"
+                data-action="edit-line" data-product-id="${line.product_config.product_id}" data-idx="${idx}">✏️ Modifier</button>`
             : ''}
           <button class="btn btn-ghost btn-sm btn-icon" title="Supprimer"
             style="color:var(--color-danger)"
@@ -612,7 +698,8 @@ function renderDevisLines() {
         </div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   const deliveryRow = (state.delivery.enabled && state.delivery.amount > 0) ? `
     <div class="devis-line" style="border-color:var(--color-gray-300);background:var(--color-gray-50)">

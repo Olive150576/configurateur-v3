@@ -675,9 +675,10 @@ function openModuleModal(idx = null) {
   state.editingModuleIdx = idx;
   const module = idx !== null ? state.editingModules[idx] : null;
 
-  document.getElementById('m-id').value   = module?.id          ?? '';
-  document.getElementById('m-name').value = module?.name        ?? '';
-  document.getElementById('m-desc').value = module?.description ?? '';
+  document.getElementById('m-id').value         = module?.id          ?? '';
+  document.getElementById('m-name').value       = module?.name        ?? '';
+  document.getElementById('m-desc').value       = module?.description ?? '';
+  document.getElementById('m-dimensions').value = module?.dimensions  ?? '';
   document.getElementById('m-id').disabled = idx !== null;
 
   // Générer les inputs prix par gamme
@@ -720,6 +721,7 @@ function handleSaveModule() {
   const id   = document.getElementById('m-id').value.trim();
   const name = document.getElementById('m-name').value.trim();
   const desc = document.getElementById('m-desc').value.trim();
+  const dims = document.getElementById('m-dimensions').value.trim();
 
   let valid = true;
   if (!id)   { showFieldError('m-id',   'err-m-id',   'ID obligatoire');  valid = false; }
@@ -744,14 +746,14 @@ function handleSaveModule() {
 
   if (!valid) return;
 
-  const moduleData = { id, name, description: desc, prices };
+  const moduleData = { id, name, description: desc, dimensions: dims, prices };
 
   if (state.editingModuleIdx === null) {
     state.editingModules.push(moduleData);
   } else {
     state.editingModules[state.editingModuleIdx] = {
       ...state.editingModules[state.editingModuleIdx],
-      name, description: desc, prices
+      name, description: desc, dimensions: dims, prices
     };
   }
 

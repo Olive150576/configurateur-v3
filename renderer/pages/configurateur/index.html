@@ -344,6 +344,7 @@
         placeholder="Sans client" list="clients-datalist" autocomplete="off"
         style="width:180px">
       <datalist id="clients-datalist"></datalist>
+      <button class="btn btn-ghost btn-sm" id="btn-new-client" title="Nouveau client" style="padding:0 8px;font-size:16px;line-height:1">+</button>
     </div>
 
     <!-- Type -->
@@ -508,7 +509,13 @@
 
       <!-- OPTIONS -->
       <div class="config-section" id="section-options" style="display:none">
-        <div class="config-section-title">Options / Finitions</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div class="config-section-title" style="margin-bottom:0">Options / Finitions</div>
+          <span id="options-count-badge" class="badge badge-gray" style="font-size:10px"></span>
+        </div>
+        <div style="font-size:11px;color:var(--color-gray-500);margin-bottom:8px;padding:6px 10px;background:#f0fdf4;border-radius:6px;border-left:3px solid #22c55e">
+          💡 Ces options s'appliquent <strong>uniquement à cet article</strong>. Chaque produit peut avoir des options différentes.
+        </div>
         <div id="config-options"></div>
       </div>
 
@@ -577,6 +584,54 @@
   </div>
 </div>
 
+
+<!-- ==================== MODAL NOUVEAU CLIENT ==================== -->
+<div id="modal-new-client" class="modal-backdrop" style="z-index:1300">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h2>Nouveau client</h2>
+      <button class="modal-close" id="btn-close-new-client">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Nom <span style="color:var(--color-danger)">*</span></label>
+        <input type="text" id="nc-name" class="form-control" placeholder="Prénom Nom">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Société</label>
+        <input type="text" id="nc-company" class="form-control" placeholder="Société SA">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="nc-email" class="form-control" placeholder="mail@exemple.fr">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Téléphone</label>
+          <input type="text" id="nc-phone" class="form-control" placeholder="06 00 00 00 00">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Adresse</label>
+        <input type="text" id="nc-address" class="form-control" placeholder="12 rue des Fleurs">
+      </div>
+      <div style="display:grid;grid-template-columns:100px 1fr;gap:12px">
+        <div class="form-group">
+          <label class="form-label">Code postal</label>
+          <input type="text" id="nc-zip" class="form-control" placeholder="75001">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ville</label>
+          <input type="text" id="nc-city" class="form-control" placeholder="Paris">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="btn-cancel-new-client">Annuler</button>
+      <button class="btn btn-primary" id="btn-save-new-client">Créer le client</button>
+    </div>
+  </div>
+</div>
 
 <script src="../../shared/utils.js"></script>
 <script src="./configurateur.js"></script>

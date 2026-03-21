@@ -25,7 +25,7 @@ async function openDocument(documentId) {
   const htmlPath = path.join(__dirname, '../../renderer/print/print.html');
   await win.loadFile(htmlPath, { query: { docId: documentId } });
 
-  return win;
+  return { opened: true };
 }
 
 /**
@@ -82,4 +82,26 @@ async function saveAndEmail(win, opts = {}) {
   return { saved: true, path: pdfPath };
 }
 
-module.exports = { openDocument, savePDF, saveAndEmail };
+/**
+ * Ouvre le bon de commande fournisseur (sans prix) pour un document
+ */
+async function openSupplierDocument(documentId) {
+  const win = new BrowserWindow({
+    width:  800,
+    height: 1000,
+    minWidth: 650,
+    title: 'Bon de commande fournisseur',
+    webPreferences: {
+      preload: path.join(__dirname, '../preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  const htmlPath = path.join(__dirname, '../../renderer/print/print-supplier.html');
+  await win.loadFile(htmlPath, { query: { docId: documentId } });
+
+  return { opened: true };
+}
+
+module.exports = { openDocument, openSupplierDocument, savePDF, saveAndEmail };

@@ -166,8 +166,9 @@ function setupDocModal() {
     if (action === 'cancel')    cancelDocConfirm(id);
     if (action === 'archive')   archiveDocConfirm(id);
     if (action === 'duplicate') duplicateDoc(id);
-    if (action === 'print')     printDoc(id);
-    if (action === 'delete')    deleteDocConfirm(id);
+    if (action === 'print')          printDoc(id);
+    if (action === 'print-supplier') printSupplierDoc(id);
+    if (action === 'delete')         deleteDocConfirm(id);
   });
 }
 
@@ -363,7 +364,13 @@ function renderDocActions(doc) {
     html += btn('✕', 'Annuler', 'cancel', id, 'color:var(--color-danger)');
     html += btn('🗑', 'Supprimer', 'delete', id, 'color:var(--color-danger)');
   }
-  else if (['ordered', 'cancelled'].includes(doc.status)) {
+  else if (doc.status === 'ordered') {
+    html += btnLabel('📦 BdC Fournisseur', 'print-supplier', id, 'btn-ghost');
+    html += btn('📋', 'Dupliquer', 'duplicate', id);
+    html += btn('🗄', 'Archiver', 'archive', id);
+    html += btn('🗑', 'Supprimer', 'delete', id, 'color:var(--color-danger)');
+  }
+  else if (doc.status === 'cancelled') {
     html += btn('📋', 'Dupliquer', 'duplicate', id);
     html += btn('🗄', 'Archiver', 'archive', id);
     html += btn('🗑', 'Supprimer', 'delete', id, 'color:var(--color-danger)');
@@ -833,6 +840,11 @@ function deleteDocConfirm(docId) {
 async function printDoc(docId) {
   const res = await window.api.documents.print(docId);
   if (!res.ok) Utils.toast('Impossible d\'ouvrir l\'aperçu : ' + res.error, 'error');
+}
+
+async function printSupplierDoc(docId) {
+  const res = await window.api.documents.printSupplier(docId);
+  if (!res.ok) Utils.toast('Impossible de générer le BdC fournisseur : ' + res.error, 'error');
 }
 
 async function duplicateDoc(docId) {

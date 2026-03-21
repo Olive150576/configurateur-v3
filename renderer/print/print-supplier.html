@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+  <title>Bon de commande fournisseur</title>
+  <style>
+    :root {
+      --black:  #1a1a1a;
+      --gray:   #6b7280;
+      --light:  #9ca3af;
+      --border: #e5e7eb;
+      --gold:   #b8956a;
+      --serif:  'Georgia', 'Times New Roman', serif;
+      --sans:   -apple-system, 'Segoe UI', Arial, sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--sans);
+      background: #f3f4f6;
+      color: var(--black);
+    }
+
+    /* ===== TOOLBAR ===== */
+    .toolbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 48px;
+      background: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px;
+      z-index: 100;
+      print-color-adjust: exact;
+    }
+    .toolbar-title {
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      flex: 1;
+    }
+    .tbtn {
+      height: 30px;
+      padding: 0 14px;
+      border: none;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      color: white;
+    }
+    .tbtn-default  { background: #334155; }
+    .tbtn-default:hover { background: #475569; }
+    .tbtn-email    { background: #16a34a; }
+    .tbtn-email:hover { background: #15803d; }
+    .tbtn-close    { background: #475569; }
+    .tbtn-close:hover { background: #64748b; }
+
+    @media print {
+      .toolbar { display: none; }
+      body { background: white; }
+    }
+
+    /* ===== PAGE ===== */
+    .page-wrap {
+      margin-top: 60px;
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .doc-page {
+      width: 210mm;
+      min-height: 297mm;
+      background: white;
+      padding: 14mm 16mm 12mm;
+      box-shadow: 0 4px 24px rgba(0,0,0,.12);
+      display: flex;
+      flex-direction: column;
+    }
+
+    @media print {
+      .page-wrap { margin: 0; padding: 0; }
+      .doc-page  { box-shadow: none; width: 100%; padding: 12mm 14mm; }
+    }
+
+    /* ===== HEADER ===== */
+    .sup-header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      gap: 16px;
+      margin-bottom: 8mm;
+    }
+
+    .sup-type-label {
+      font-family: var(--serif);
+      font-size: 22px;
+      font-style: italic;
+      color: var(--black);
+      margin-bottom: 4px;
+    }
+
+    .sup-date {
+      font-size: 10px;
+      color: var(--gray);
+      letter-spacing: 0.05em;
+    }
+
+    .sup-logo {
+      max-height: 72px;
+      max-width: 160px;
+      display: block;
+      margin-left: auto;
+    }
+
+    /* ===== BANDE INFOS ===== */
+    .sup-info-band {
+      border-top: 2px solid var(--gold);
+      border-bottom: 1px solid var(--border);
+      padding: 6px 0;
+      margin-bottom: 7mm;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 10px;
+    }
+
+    .sup-info-band .info-label {
+      font-size: 8px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 2px;
+    }
+
+    .sup-info-band .info-val {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--black);
+    }
+
+    .sup-info-band .info-sub {
+      font-size: 9.5px;
+      color: var(--gray);
+    }
+
+    /* ===== BLOC FOURNISSEUR ===== */
+    .supplier-block {
+      margin-bottom: 6mm;
+      padding: 8px 12px;
+      border-left: 3px solid var(--gold);
+      background: #faf8f5;
+    }
+
+    .supplier-block-label {
+      font-size: 8px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 3px;
+    }
+
+    .supplier-block-name {
+      font-family: var(--serif);
+      font-size: 16px;
+      font-style: italic;
+      color: var(--black);
+    }
+
+    /* ===== TABLE ARTICLES ===== */
+    .articles-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 6mm;
+      font-size: 10px;
+    }
+
+    .articles-table thead tr {
+      border-bottom: 1.5px solid var(--gold);
+    }
+
+    .articles-table th {
+      padding: 5px 8px;
+      font-size: 8px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 600;
+      text-align: left;
+    }
+
+    .articles-table td {
+      padding: 7px 8px;
+      border-bottom: 1px solid #f1f1f1;
+      vertical-align: top;
+    }
+
+    .articles-table tr:last-child td { border-bottom: none; }
+
+    .td-num {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 9px;
+      color: var(--gold);
+      white-space: nowrap;
+      width: 24px;
+    }
+
+    .td-desig { width: 100%; }
+
+    .desig-main {
+      font-family: var(--serif);
+      font-size: 12px;
+      color: var(--black);
+    }
+
+    .desig-gamme {
+      font-size: 9px;
+      color: var(--gray);
+      margin-top: 1px;
+    }
+
+    .desig-module {
+      font-size: 10px;
+      color: var(--black);
+      margin-top: 3px;
+      padding-left: 8px;
+      border-left: 2px solid #e5e7eb;
+    }
+
+    .desig-option {
+      font-size: 10px;
+      color: #16a34a;
+      margin-top: 2px;
+      padding-left: 8px;
+      border-left: 2px solid #bbf7d0;
+    }
+
+    .desig-coloris {
+      margin-top: 4px;
+      display: inline-block;
+      background: #fefce8;
+      border: 1px solid #fde68a;
+      border-radius: 3px;
+      padding: 1px 7px;
+      font-size: 9.5px;
+      color: #92400e;
+      font-weight: 600;
+    }
+
+    .td-qty {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--black);
+      white-space: nowrap;
+      width: 40px;
+    }
+
+    /* ===== NOTE ===== */
+    .sup-note {
+      margin-top: 4mm;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 9.5px;
+      color: var(--gray);
+      font-style: italic;
+    }
+
+    /* ===== FOOTER ===== */
+    .sup-footer {
+      margin-top: auto;
+      padding-top: 4mm;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 8px;
+      color: var(--light);
+      line-height: 1.7;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* ===== ERROR ===== */
+    .error-msg {
+      color: #dc2626;
+      padding: 20px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <span class="toolbar-title" id="toolbar-title">Bon de commande fournisseur</span>
+  <button class="tbtn tbtn-default" id="btn-save-pdf">📄 Sauvegarder PDF</button>
+  <button class="tbtn tbtn-email"   id="btn-email">✉ Envoyer au fournisseur</button>
+  <button class="tbtn tbtn-default" id="btn-print">🖨 Imprimer</button>
+  <button class="tbtn tbtn-close"   id="btn-close">✕ Fermer</button>
+</div>
+
+<!-- PAGE -->
+<div class="page-wrap">
+  <div class="doc-page" id="doc-page">
+    <div class="error-msg" id="error-msg" style="display:none"></div>
+  </div>
+</div>
+
+<script src="../../shared/utils.js"></script>
+<script src="./print-supplier.js"></script>
+</body>
+</html>

@@ -17,6 +17,11 @@ function register(ipcMain) {
     return wrap(() => PrintService.savePDF(win, defaultName));
   });
 
+  // Bon de commande fournisseur (sans prix)
+  ipcMain.handle('documents:printSupplier', (_, docId) =>
+    wrap(() => PrintService.openSupplierDocument(docId))
+  );
+
   // Sauvegarde dans Documents/Devis/ et ouvre le client mail
   ipcMain.handle('print:openEmail', (event, opts) => {
     const win = BrowserWindow.fromWebContents(event.sender);

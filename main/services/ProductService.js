@@ -121,9 +121,9 @@ function create(data) {
       const m = data.modules[i];
       const moduleId = generateId('mod');
       db.prepare(`
-        INSERT INTO modules (id, product_id, name, description, sort_order)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(moduleId, id, m.name.trim(), m.description?.trim() || '', i);
+        INSERT INTO modules (id, product_id, name, description, dimensions, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(moduleId, id, m.name.trim(), m.description?.trim() || '', m.dimensions?.trim() || '', i);
 
       // Prix par gamme — utiliser le mapping pour les IDs de gammes
       for (const [origRangeId, price] of Object.entries(m.prices || {})) {
@@ -206,9 +206,9 @@ function update(id, data) {
         const m = data.modules[i];
         const moduleId = m.id || generateId('mod');
         db.prepare(`
-          INSERT INTO modules (id, product_id, name, description, sort_order)
-          VALUES (?, ?, ?, ?, ?)
-        `).run(moduleId, id, m.name.trim(), m.description?.trim() || '', i);
+          INSERT INTO modules (id, product_id, name, description, dimensions, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(moduleId, id, m.name.trim(), m.description?.trim() || '', m.dimensions?.trim() || '', i);
 
         for (const [rangeId, price] of Object.entries(m.prices || {})) {
           db.prepare(`

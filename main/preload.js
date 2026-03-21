@@ -42,7 +42,8 @@ contextBridge.exposeInMainWorld('api', {
     transform:  (id, type)  => ipcRenderer.invoke('documents:transform', id, type),
     duplicate:  (id)        => ipcRenderer.invoke('documents:duplicate', id),
     delete:     (id)        => ipcRenderer.invoke('documents:delete', id),
-    print:      (id)        => ipcRenderer.invoke('documents:print', id),
+    print:         (id) => ipcRenderer.invoke('documents:print', id),
+    printSupplier: (id) => ipcRenderer.invoke('documents:printSupplier', id),
   },
 
   // ==================== CLIENTS ====================

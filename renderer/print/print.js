@@ -249,7 +249,7 @@ function renderLinesTable(lines, vatRate) {
   const rows = [];
   let idx = 0;
 
-  lines.forEach(line => {
+  lines.forEach((line, lineIdx) => {
     const modules = line.product_config?.modules ?? [];
     const options = line.product_config?.options ?? [];
 
@@ -259,9 +259,16 @@ function renderLinesTable(lines, vatRate) {
       return;
     }
 
-    const colorRef = line.color_ref || '';
-
+    const colorRef    = line.color_ref || '';
     const productDesc = line.product_config?.product_description || '';
+    const lineQty     = line.qty || 1;
+    const lineTotalTTC = r2((line.unit_price ?? 0) * lineQty * (1 + vatRate / 100));
+
+    // En-tête de groupe (désignation produit + quantité + total TTC)
+    if (modules.length > 0 || options.length > 0) {
+      const desig = (line.designation || '').replace(' — ', ' · ');
+      rows.push(renderGroupHeader(desig, lineQty, lineTotalTTC, lineIdx === 0));
+    }
 
     if (modules.length > 0) {
       // Un article = un module → une ligne par module
@@ -277,7 +284,7 @@ function renderLinesTable(lines, vatRate) {
     } else {
       // Pas de modules → la ligne entière
       const desig = (line.designation || '').replace(' — ', ' · ');
-      rows.push(renderRow(idx++, desig, line.qty || 1, line.unit_price ?? 0, vatRate, false, colorRef, '', productDesc));
+      rows.push(renderRow(idx++, desig, lineQty, line.unit_price ?? 0, vatRate, false, colorRef, '', productDesc));
     }
   });
 
@@ -295,6 +302,20 @@ function renderLinesTable(lines, vatRate) {
       </thead>
       <tbody>${rows.join('')}</tbody>
     </table>
+  `;
+}
+
+function renderGroupHeader(designation, qty, totalTTC, isFirst = false) {
+  return `
+    <tr class="group-header-row${isFirst ? ' first' : ''}">
+      <td colspan="6">
+        <div class="group-header-inner">
+          <span class="group-header-name">${esc(designation)}</span>
+          ${qty > 1 ? `<span class="group-header-qty">× ${qty}</span>` : ''}
+          <span class="group-header-total">${formatAmount(totalTTC)} € TTC</span>
+        </div>
+      </td>
+    </tr>
   `;
 }
 
