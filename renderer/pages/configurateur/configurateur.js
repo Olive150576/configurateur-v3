@@ -754,35 +754,38 @@ function removeLine(idx) {
 // ==================== TOTAUX DEVIS ====================
 
 function recalcDevisTotals() {
-  const deliveryAmt = state.delivery.enabled ? state.delivery.amount : 0;
-  const subtotal    = state.devisLines.reduce((s, l) => s + l.total, 0) + deliveryAmt;
+  const deliveryAmt   = state.delivery.enabled ? state.delivery.amount : 0;
+  const subtotal      = state.devisLines.reduce((s, l) => s + l.total, 0) + deliveryAmt;
+  const vatAmt        = round2(subtotal * state.vatRate / 100);
+  const totalTTC_brut = round2(subtotal + vatAmt);
+
+  // Remise appliquée sur le TTC brut
   const discInput   = parseFloat(document.getElementById('f-discount').value) || 0;
   const discInEur   = document.getElementById('discount-mode-eur').classList.contains('active');
   const discAmt     = discInEur
-    ? round2(Math.min(Math.max(discInput, 0), subtotal))
-    : round2(subtotal * clamp(discInput, 0, 100) / 100);
-  const discPct     = subtotal > 0 ? round2(discAmt / subtotal * 100) : 0;
-  const totalHT     = round2(subtotal - discAmt);
-  const vatAmt      = round2(totalHT * state.vatRate / 100);
-  const totalTTC    = round2(totalHT + vatAmt);
+    ? round2(Math.min(Math.max(discInput, 0), totalTTC_brut))
+    : round2(totalTTC_brut * clamp(discInput, 0, 100) / 100);
+  const discPct     = totalTTC_brut > 0 ? round2(discAmt / totalTTC_brut * 100) : 0;
+  const netTTC      = round2(totalTTC_brut - discAmt);
+
+  // Acompte calculé sur le net TTC (après remise)
   const depInput    = parseFloat(document.getElementById('f-deposit').value) || 0;
   const depInEur    = document.getElementById('deposit-mode-eur').classList.contains('active');
-  // L'acompte est calculé sur le TTC
   const depositAmt  = depInEur
-    ? round2(Math.min(Math.max(depInput, 0), totalTTC))
-    : round2(totalTTC * clamp(depInput, 0, 100) / 100);
-  const depositPct  = totalTTC > 0 ? round2(depositAmt / totalTTC * 100) : 0;
-  const balance     = round2(totalTTC - depositAmt);
+    ? round2(Math.min(Math.max(depInput, 0), netTTC))
+    : round2(netTTC * clamp(depInput, 0, 100) / 100);
+  const depositPct  = netTTC > 0 ? round2(depositAmt / netTTC * 100) : 0;
+  const balance     = round2(netTTC - depositAmt);
 
   state.totals = { subtotal, discountPct: discPct, discountAmt: discAmt,
-                   total: totalHT, totalTTC, depositPct, depositAmt, balance };
+                   total: netTTC, vatAmt, totalTTC: totalTTC_brut, depositPct, depositAmt, balance };
 
   document.getElementById('dt-subtotal').textContent  = Utils.formatPrice(subtotal);
-  document.getElementById('dt-discount').textContent  = `— ${Utils.formatPrice(discAmt)}`;
-  document.getElementById('dt-total').textContent     = Utils.formatPrice(totalHT);
   document.getElementById('dt-vat-label').textContent = `TVA ${state.vatRate}%`;
   document.getElementById('dt-vat').textContent       = Utils.formatPrice(vatAmt);
-  document.getElementById('dt-ttc').textContent       = Utils.formatPrice(totalTTC);
+  document.getElementById('dt-ttc').textContent       = Utils.formatPrice(totalTTC_brut);
+  document.getElementById('dt-discount').textContent  = `— ${Utils.formatPrice(discAmt)}`;
+  document.getElementById('dt-total').textContent     = Utils.formatPrice(netTTC);
   document.getElementById('dt-deposit').textContent   = Utils.formatPrice(depositAmt) + ' TTC';
   document.getElementById('dt-balance').textContent   = Utils.formatPrice(balance) + ' TTC';
 }

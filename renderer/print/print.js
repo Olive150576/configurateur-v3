@@ -101,11 +101,12 @@ function setupToolbar(doc) {
 // ==================== RENDER ====================
 
 function renderDocument(doc, company, logo, vatRate) {
-  const lines    = doc.product_snapshot?.lines ?? [];
-  const client   = doc.client_snapshot ?? {};
-  const totalHT  = doc.total ?? 0;
-  const vatAmt   = r2(totalHT * vatRate / 100);
-  const totalTTC = r2(totalHT + vatAmt);
+  const lines         = doc.product_snapshot?.lines ?? [];
+  const client        = doc.client_snapshot ?? {};
+  const subtotalHT    = doc.subtotal ?? 0;
+  const vatAmt        = r2(subtotalHT * vatRate / 100);
+  const totalTTC_brut = r2(subtotalHT + vatAmt);
+  const netTTC        = doc.total ?? 0;   // Net TTC après remise
 
   const info = extractHeaderInfo(lines);
 
@@ -118,7 +119,7 @@ function renderDocument(doc, company, logo, vatRate) {
     <div class="lines">
       ${renderLinesTable(lines, vatRate)}
     </div>
-    ${renderTotals(doc, totalHT, vatAmt, totalTTC, vatRate)}
+    ${renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate)}
     ${renderFooter(company, doc.type)}
   `;
 }
@@ -349,48 +350,47 @@ function renderRow(idx, name, qty, unitHT, vatRate, isOption = false, colorRef =
 
 // ==================== TOTALS ====================
 
-function renderTotals(doc, totalHT, vatAmt, totalTTC, vatRate) {
+function renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate) {
   const discPct    = doc.discount_percent ?? 0;
   const discAmt    = doc.discount_amount  ?? 0;
-  // Label remise : "Remise X%" seulement si le % est un entier rond (mode %), sinon "Remise"
   const discLabel  = (discPct > 0 && Number.isInteger(discPct)) ? `Remise ${discPct}%` : 'Remise';
 
-  // Acompte : utiliser deposit_amount directement (toujours TTC), sinon recalculer
+  // Acompte : utiliser deposit_amount directement (TTC), sinon recalculer sur netTTC
   const depositTTC = doc.deposit_amount > 0
     ? r2(doc.deposit_amount)
-    : (doc.deposit_percent > 0 ? r2(totalTTC * doc.deposit_percent / 100) : 0);
-  const balanceTTC = depositTTC > 0 ? r2(totalTTC - depositTTC) : 0;
+    : (doc.deposit_percent > 0 ? r2(netTTC * doc.deposit_percent / 100) : 0);
+  const balanceTTC = depositTTC > 0 ? r2(netTTC - depositTTC) : 0;
   const depPct     = doc.deposit_percent ?? 0;
   const depLabel   = (depPct > 0 && Number.isInteger(depPct)) ? `Acompte ${depPct}%` : 'Acompte';
 
   return `
     <div class="total-section">
       <div class="total-ht-rows">
-        ${discAmt > 0 ? `
-          <div class="total-ht-row">
-            <span>Sous-total HT</span>
-            <span>${formatPrice(doc.subtotal || 0)} €</span>
-          </div>
-          <div class="total-ht-row">
-            <span>${discLabel}</span>
-            <span>— ${formatPrice(discAmt)} €</span>
-          </div>
-        ` : ''}
         <div class="total-ht-row">
-          <span>Total HT</span>
-          <span>${formatPrice(totalHT)} €</span>
+          <span>Sous-total HT</span>
+          <span>${formatPrice(subtotalHT)} €</span>
         </div>
         <div class="total-ht-row">
           <span>TVA ${vatRate}%</span>
           <span>${formatPrice(vatAmt)} €</span>
         </div>
+        <div class="total-ht-row">
+          <span>Total TTC</span>
+          <span>${formatPrice(totalTTC_brut)} €</span>
+        </div>
+        ${discAmt > 0 ? `
+          <div class="total-ht-row">
+            <span>${discLabel}</span>
+            <span>— ${formatPrice(discAmt)} €</span>
+          </div>
+        ` : ''}
       </div>
 
       <div class="total-main-row">
-        <span class="total-main-label">Total TTC</span>
+        <span class="total-main-label">${discAmt > 0 ? 'Net TTC' : 'Total TTC'}</span>
         <div class="total-main-price">
           <span class="total-sym">€</span>
-          <span class="total-amt">${formatAmount(totalTTC)}</span>
+          <span class="total-amt">${formatAmount(netTTC)}</span>
           <span class="total-suffix">TTC</span>
         </div>
       </div>

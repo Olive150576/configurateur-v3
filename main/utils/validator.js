@@ -68,21 +68,13 @@ function validateDocument(doc) {
       doc.discount_percent < 0 || doc.discount_percent > 100)
     errors.push('Pourcentage de remise invalide (0-100)');
 
-  if (doc.discount_amount > doc.subtotal)
-    errors.push('La remise ne peut pas dépasser le sous-total');
-
   if (typeof doc.total !== 'number' || doc.total < 0)
     errors.push('Total invalide');
-
-  // Vérification cohérence total
-  const expectedTotal = doc.subtotal - doc.discount_amount;
-  if (Math.abs(doc.total - expectedTotal) > 0.01)
-    errors.push('Incohérence: total ≠ sous-total − remise');
 
   if (doc.deposit_amount > doc.total)
     errors.push("L'acompte ne peut pas dépasser le total");
 
-  // Vérification cohérence solde
+  // Vérification cohérence solde (doc.total = net TTC, balance = netTTC − acompte)
   const expectedBalance = doc.total - doc.deposit_amount;
   if (Math.abs(doc.balance - expectedBalance) > 0.01)
     errors.push('Incohérence: solde ≠ total − acompte');
