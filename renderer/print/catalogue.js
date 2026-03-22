@@ -1,8 +1,6 @@
 /**
- * catalogue.js — Rendu du catalogue PDF fournisseur
- *
- * Reçoit supplierId en query param, charge tous les produits actifs
- * de ce fournisseur, les dispose en grille 2 colonnes par page A4.
+ * catalogue.js — Catalogue PDF fournisseur
+ * Une page A4 par référence produit.
  */
 
 'use strict';
@@ -11,7 +9,15 @@
 
 const params     = new URLSearchParams(window.location.search);
 const supplierId = params.get('supplierId') || '';
-const PRODUCTS_PER_PAGE = 4; // 2 colonnes × 2 lignes
+
+// ── Config ────────────────────────────────────────────────────────────────────
+
+const CONFIG_KEYS = [
+  'company_name', 'company_trade_name',
+  'company_address', 'company_zip', 'company_city',
+  'company_phone', 'company_email', 'company_website',
+  'company_logo', 'vat_rate',
+];
 
 // ── Toolbar ───────────────────────────────────────────────────────────────────
 
@@ -23,25 +29,8 @@ document.getElementById('btn-save-pdf').addEventListener('click', async () => {
   try {
     const title = document.getElementById('toolbar-title').textContent;
     await window.api.print.savePDF(`${title}.pdf`);
-  } finally {
-    btn.disabled = false;
-  }
+  } finally { btn.disabled = false; }
 });
-
-document.getElementById('sort-select').addEventListener('change', () => {
-  if (window._catalogueProducts && window._catalogueCompany) {
-    renderCatalogue(window._catalogueProducts, window._catalogueCompany, window._catalogueQR);
-  }
-});
-
-// ── Config entreprise ─────────────────────────────────────────────────────────
-
-const CONFIG_KEYS = [
-  'company_name', 'company_trade_name',
-  'company_address', 'company_zip', 'company_city',
-  'company_phone', 'company_email', 'company_website',
-  'company_logo',
-];
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
@@ -52,180 +41,238 @@ document.addEventListener('DOMContentLoaded', async () => {
       ...CONFIG_KEYS.map(k => window.api.app.getConfig(k)),
     ]);
 
-    if (!allProdsRes?.ok) { showError('Erreur chargement produits.'); return; }
+    if (!allProdsRes?.ok) { showError('Erreur chargement produits : ' + (allProdsRes?.error || '')); return; }
 
     const company = {};
     CONFIG_KEYS.forEach((k, i) => {
       company[k] = (configResults[i]?.ok ? configResults[i].data : '') || '';
     });
 
-    let products = allProdsRes.data.filter(p => !p.archived && p.active !== 0);
-    if (supplierId) products = products.filter(p => p.supplier_id === supplierId);
+    const vatRate = parseFloat(company.vat_rate) || 20;
 
-    if (products.length === 0) { showError('Aucun produit actif pour ce fournisseur.'); return; }
+    // Filtre : non archivés, actifs, et fournisseur si sélectionné
+    let products = allProdsRes.data.filter(p => {
+      if (p.archived == 1)    return false;
+      if (p.active  == 0)     return false;
+      if (supplierId && p.supplier_id !== supplierId) return false;
+      return true;
+    });
 
-    const supplierName = products[0]?.supplier_name || 'Catalogue';
-    document.getElementById('toolbar-title').textContent = `Catalogue — ${supplierName}`;
-
-    // QR optionnel (logo URL de la société)
-    let qrDataUrl = '';
-    if (company.company_website || company.company_name) {
-      const qrText = company.company_website || company.company_name;
-      try {
-        const qrRes = await window.api.products.generateQR(qrText);
-        if (qrRes?.ok) qrDataUrl = qrRes.data;
-      } catch (_) {}
+    if (products.length === 0) {
+      showError('Aucun produit actif trouvé' + (supplierId ? ' pour ce fournisseur' : '') + '.');
+      return;
     }
 
-    window._catalogueProducts = products;
-    window._catalogueCompany  = company;
-    window._catalogueQR       = qrDataUrl;
+    // Tri alphabétique par défaut
+    products.sort((a, b) =>
+      (a.collection || '').localeCompare(b.collection || '') ||
+      a.name.localeCompare(b.name)
+    );
 
-    renderCatalogue(products, company, qrDataUrl);
+    const supplierName = supplierId ? (products[0]?.supplier_name || '') : 'Tous fournisseurs';
+    document.getElementById('toolbar-title').textContent = `Catalogue — ${supplierName}`;
+    document.getElementById('toolbar-info').textContent  = `${products.length} produit${products.length > 1 ? 's' : ''}`;
+
+    renderCatalogue(products, company, vatRate);
+
   } catch (e) {
-    showError('Erreur : ' + e.message);
+    showError('Erreur inattendue : ' + e.message);
   }
 });
 
 function showError(msg) {
   document.getElementById('loading').innerHTML =
-    `<div style="color:#c00">${escHtml(msg)}</div>`;
+    `<div style="color:#c00;padding:40px;text-align:center">${escHtml(msg)}</div>`;
 }
 
-// ── Tri ───────────────────────────────────────────────────────────────────────
+// ── Rendu principal — 1 page par produit ──────────────────────────────────────
 
-function sortProducts(products) {
-  const mode = document.getElementById('sort-select').value;
-  const list = [...products];
-  switch (mode) {
-    case 'collection': return list.sort((a, b) =>
-      (a.collection || '').localeCompare(b.collection || '') ||
-      a.name.localeCompare(b.name));
-    case 'price-asc': return list.sort((a, b) => minPrice(a) - minPrice(b));
-    case 'price-desc': return list.sort((a, b) => minPrice(b) - minPrice(a));
-    default: return list.sort((a, b) => a.name.localeCompare(b.name));
-  }
-}
+function renderCatalogue(products, company, vatRate) {
+  const pagesEl     = document.getElementById('catalogue-pages');
+  const companyName = company.company_trade_name || company.company_name || '';
+  const logo        = company.company_logo || '';
+  const total       = products.length;
 
-function minPrice(p) {
-  const coeff = p.purchase_coefficient ?? 2;
-  const prices = (p.ranges || []).map(r => r.base_price * coeff);
-  return prices.length ? Math.min(...prices) : 0;
-}
-
-// ── Rendu ──────────────────────────────────────────────────────────────────────
-
-function renderCatalogue(products, company, qrDataUrl) {
-  const sorted      = sortProducts(products);
-  const supplierName = sorted[0]?.supplier_name || '';
-  const companyName  = company.company_trade_name || company.company_name || '';
-  const logo         = company.company_logo || '';
-  const totalPages   = Math.ceil(sorted.length / PRODUCTS_PER_PAGE);
-
-  const pagesEl = document.getElementById('catalogue-pages');
   pagesEl.innerHTML = '';
 
-  for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
-    const pageProducts = sorted.slice(pageIdx * PRODUCTS_PER_PAGE, (pageIdx + 1) * PRODUCTS_PER_PAGE);
-    const pageNum = pageIdx + 1;
-
+  products.forEach((p, idx) => {
     const pageEl = document.createElement('div');
-    pageEl.className = 'catalogue-page';
-    pageEl.innerHTML = `
-      ${renderPageHeader(logo, supplierName, companyName, company, qrDataUrl, pageNum, totalPages)}
-      <div class="gold-rule"></div>
-      <div class="products-grid">
-        ${pageProducts.map(p => renderProductCard(p)).join('')}
-      </div>
-      <div class="cat-footer">
-        <div class="cat-footer-left">
-          Tarifs indicatifs TTC — ${new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })}
-        </div>
-        <div class="cat-footer-right">${escHtml(companyName)}</div>
-      </div>
-    `;
+    pageEl.className = 'cat-page';
+    pageEl.innerHTML = renderProductPage(p, company, logo, companyName, vatRate, idx + 1, total);
     pagesEl.appendChild(pageEl);
-  }
+  });
 
   document.getElementById('loading').style.display = 'none';
   pagesEl.style.display = 'flex';
 }
 
-function renderPageHeader(logo, supplierName, companyName, company, qrDataUrl, pageNum, totalPages) {
+// ── Page produit ──────────────────────────────────────────────────────────────
+
+function renderProductPage(p, company, logo, companyName, vatRate, pageNum, total) {
+  const coeff    = parseFloat(p.purchase_coefficient) || 2;
+  const rounding = p.price_rounding || 'none';
+
+  const ranges = (p.ranges || []).map(r => ({
+    ...r,
+    saleHT:  applyRounding(parseFloat(r.base_price) * coeff, rounding),
+    saleTTC: applyRounding(parseFloat(r.base_price) * coeff * (1 + vatRate / 100), rounding),
+  }));
+
+  const modules = p.modules || [];
+  const options = p.options || [];
+
+  const descLines = (p.description || '')
+    .split('\n')
+    .map(l => l.replace(/^[-–—•]\s*/, '').trim())
+    .filter(Boolean);
+
   return `
-    <div class="cat-header">
-      <div class="cat-header-left">
-        <div class="cat-logo">
-          ${logo
-            ? `<img src="${logo}" alt="Logo">`
-            : `<div class="cat-logo-placeholder">Logo</div>`}
+    ${renderHeader(p, logo, companyName, company, pageNum, total)}
+    <div class="gold-rule"></div>
+
+    <div class="cat-body">
+
+      <!-- PHOTO + DESCRIPTION -->
+      <div class="cat-top">
+        <div class="cat-photo">
+          ${p.photo
+            ? `<img src="${p.photo}" alt="${escHtml(p.name)}">`
+            : `<div class="cat-photo-ph">Photo<br>produit</div>`}
         </div>
-        <div>
-          <div class="cat-header-title">Catalogue</div>
-          <div class="cat-header-supplier">${escHtml(supplierName || 'Tous fournisseurs')}</div>
+        <div class="cat-description">
+          <div class="cat-desc-title">Description</div>
+          ${descLines.length
+            ? `<ul class="cat-desc-list">
+                ${descLines.slice(0, 8).map(l => `<li><span>${escHtml(l)}</span></li>`).join('')}
+               </ul>`
+            : `<p style="font-size:11px;color:#bbb;font-style:italic">Aucune description.</p>`}
         </div>
       </div>
+
+      <!-- GAMMES ET PRIX TTC -->
+      ${ranges.length ? `
+      <div class="cat-ranges">
+        <div class="cat-section-title">Tarifs TTC (${vatRate}% TVA)</div>
+        <div class="ranges-grid">
+          ${ranges.map(r => renderRangeCard(r)).join('')}
+        </div>
+      </div>` : ''}
+
+      <!-- MODULES -->
+      ${modules.length ? `
+      <div class="cat-modules">
+        <div class="cat-section-title">Modules disponibles</div>
+        <table class="modules-table">
+          <thead>
+            <tr>
+              <th>Module</th>
+              <th class="dims-cell">Dimensions</th>
+              ${ranges.map(r => `<th class="right">${escHtml(r.name)}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${modules.slice(0, 12).map(m => renderModuleRow(m, ranges, coeff, vatRate)).join('')}
+            ${modules.length > 12 ? `<tr><td colspan="${2 + ranges.length}" style="font-size:8px;color:#bbb;padding-top:6px">+ ${modules.length - 12} autre(s) module(s)</td></tr>` : ''}
+          </tbody>
+        </table>
+      </div>` : ''}
+
+      <!-- OPTIONS -->
+      ${options.length ? `
+      <div class="cat-options">
+        <div class="cat-section-title" style="margin-bottom:8px">Options & finitions</div>
+        <div class="options-list">
+          ${options.map(o => renderOptionChip(o, coeff, vatRate)).join('')}
+        </div>
+      </div>` : ''}
+
+    </div>
+
+    ${renderFooter(company, companyName, pageNum, total)}
+  `;
+}
+
+function renderHeader(p, logo, companyName, company, pageNum, total) {
+  return `
+    <div class="cat-header">
+      <div class="cat-logo">
+        ${logo ? `<img src="${logo}" alt="Logo">` : `<div class="cat-logo-ph">Logo</div>`}
+      </div>
+      <div class="cat-header-mid">
+        ${p.collection ? `<div class="cat-collection">${escHtml(p.collection)}</div>` : ''}
+        <div class="cat-product-name">${escHtml(p.name)}</div>
+        ${p.supplier_name ? `<div class="cat-supplier-name">${escHtml(p.supplier_name)}</div>` : ''}
+      </div>
       <div class="cat-header-right">
-        <div class="cat-header-company">${escHtml(companyName)}</div>
-        <div class="cat-header-addr">
+        <div class="cat-company-name">${escHtml(companyName)}</div>
+        <div class="cat-company-addr">
           ${escHtml(company.company_address || '')}
           ${company.company_zip || company.company_city
             ? `<br>${escHtml([company.company_zip, company.company_city].filter(Boolean).join(' '))}`
             : ''}
           ${company.company_phone ? `<br>${escHtml(company.company_phone)}` : ''}
         </div>
-        <div class="cat-header-page">Page ${pageNum} / ${totalPages}</div>
+        <div class="cat-page-num">Fiche ${pageNum} / ${total}</div>
       </div>
     </div>`;
 }
 
-function renderProductCard(p) {
-  const coeff   = p.purchase_coefficient ?? 2;
-  const rounding = p.price_rounding ?? 'none';
-
-  const ranges = (p.ranges || []).map(r => ({
-    ...r,
-    salePrice: applyRounding(r.base_price * coeff, rounding),
-  }));
-
+function renderRangeCard(r) {
+  const [int, dec] = formatPrice(r.saleTTC);
   return `
-    <div class="product-card">
-      <div class="pc-header">
-        <div class="pc-photo">
-          ${p.photo
-            ? `<img src="${p.photo}" alt="${escHtml(p.name)}">`
-            : `<div class="pc-photo-placeholder">Photo</div>`}
-        </div>
-        <div class="pc-info">
-          ${p.collection ? `<div class="pc-collection">${escHtml(p.collection)}</div>` : ''}
-          <div class="pc-name">${escHtml(p.name)}</div>
-          ${p.supplier_name ? `<div class="pc-supplier">${escHtml(p.supplier_name)}</div>` : ''}
-          ${p.description
-            ? `<div class="pc-desc">${escHtml(p.description.split('\n')[0])}</div>`
-            : ''}
-        </div>
+    <div class="range-card">
+      <div class="range-name">${escHtml(r.name)}</div>
+      ${r.dimensions ? `<div class="range-dims">${escHtml(r.dimensions)}</div>` : '<div class="range-dims"></div>'}
+      <div class="range-price">
+        <sup>€</sup>${int}${dec !== '00' ? `<sup style="font-size:12px">${dec}</sup>` : ''}
       </div>
-
-      ${ranges.length ? `
-      <div class="pc-ranges">
-        ${ranges.map(r => renderRangeRow(r)).join('')}
-      </div>` : ''}
+      <div class="range-ttc">TTC à partir de</div>
     </div>`;
 }
 
-function renderRangeRow(r) {
-  const [int, dec] = formatPrice(r.salePrice);
+function renderModuleRow(m, ranges, coeff, vatRate) {
+  // Prix module : purchase HT × coeff × (1 + TVA)
+  const priceCells = ranges.map(r => {
+    const purchaseHT = parseFloat((m.prices || {})[r.id]);
+    if (!purchaseHT) return `<td class="right price-cell" style="color:#ccc">—</td>`;
+    const priceTTC = Math.round(purchaseHT * coeff * (1 + vatRate / 100));
+    return `<td class="right price-cell">${Number(priceTTC).toLocaleString('fr-FR')} €</td>`;
+  });
+
   return `
-    <div class="pc-range-row">
-      <div>
-        <span class="pc-range-name">${escHtml(r.name)}</span>
-        ${r.dimensions ? `<span class="pc-range-dims">${escHtml(r.dimensions)}</span>` : ''}
+    <tr>
+      <td>${escHtml(m.name)}</td>
+      <td class="dims-cell">${escHtml(m.dimensions || '')}</td>
+      ${priceCells.join('')}
+    </tr>`;
+}
+
+function renderOptionChip(o, coeff, vatRate) {
+  const priceHT  = parseFloat(o.price) || 0;
+  const priceTTC = Math.round(priceHT * coeff * (1 + vatRate / 100));
+  return `
+    <div class="opt-chip">
+      <span>${escHtml(o.name)}</span>
+      ${priceTTC > 0 ? `<span class="opt-chip-price">+${Number(priceTTC).toLocaleString('fr-FR')} €</span>` : ''}
+    </div>`;
+}
+
+function renderFooter(company, companyName, pageNum, total) {
+  return `
+    <div class="cat-footer">
+      <div class="cat-footer-left">
+        ${escHtml(company.company_address || '')}
+        ${company.company_zip || company.company_city
+          ? `<br>${escHtml([company.company_zip, company.company_city].filter(Boolean).join(' '))}`
+          : ''}
       </div>
-      <div style="text-align:right">
-        <div class="pc-range-price">
-          <sup>€</sup>${int}${dec !== '00' ? `<sup style="font-size:8px">${dec}</sup>` : ''}
-        </div>
-        <div class="pc-range-ttc">TTC</div>
+      <div class="cat-footer-center">${escHtml(companyName)}<br>
+        <span style="font-weight:400;color:#bbb;font-size:6.5px">Tarifs TTC indicatifs — ${new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })}</span>
+      </div>
+      <div class="cat-footer-right">
+        ${company.company_phone ? escHtml(company.company_phone) + '<br>' : ''}
+        ${company.company_email ? escHtml(company.company_email) + '<br>' : ''}
+        ${company.company_website ? escHtml(company.company_website) : ''}
       </div>
     </div>`;
 }
@@ -236,22 +283,21 @@ function applyRounding(price, mode) {
   if (mode === 'integer') return Math.round(price);
   if (mode === 'ten') {
     const r = Math.round(price);
-    const lastDigit = r % 10;
-    return lastDigit < 5 ? r - lastDigit : r + (10 - lastDigit);
+    const d = r % 10;
+    return d < 5 ? r - d : r + (10 - d);
   }
   return Math.round(price * 100) / 100;
 }
 
 function formatPrice(n) {
   if (!n && n !== 0) return ['0', '00'];
-  const rounded = Math.round(n * 100) / 100;
-  const str = rounded.toFixed(2);
+  const str = (Math.round(n * 100) / 100).toFixed(2);
   const [int, dec] = str.split('.');
   return [Number(int).toLocaleString('fr-FR'), dec];
 }
 
 function escHtml(s) {
-  return String(s)
+  return String(s ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

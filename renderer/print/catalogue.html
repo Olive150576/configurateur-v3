@@ -24,7 +24,7 @@
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 20px; z-index: 9999; gap: 12px;
     }
-    .toolbar-title { color: white; font-size: 13px; font-weight: 600; }
+    .toolbar-title { color: white; font-size: 13px; font-weight: 600; flex: 1; }
     .toolbar-actions { display: flex; gap: 8px; align-items: center; }
     .tbtn {
       padding: 5px 14px; border: none; border-radius: 4px;
@@ -33,15 +33,7 @@
     .tbtn-pdf   { background: #f59e0b; color: #1a1a1a; }
     .tbtn-print { background: white;   color: #1e3a5f; }
     .tbtn-close { background: rgba(255,255,255,0.15); color: white; }
-    .toolbar-filter {
-      display: flex; gap: 8px; align-items: center;
-    }
-    .toolbar-filter label { color: rgba(255,255,255,0.8); font-size: 12px; }
-    .toolbar-filter select {
-      padding: 3px 8px; border-radius: 4px; border: none;
-      font-size: 12px; background: rgba(255,255,255,0.15); color: white;
-    }
-    .toolbar-filter select option { background: #1e3a5f; }
+    .toolbar-info { color: rgba(255,255,255,0.6); font-size: 11px; }
 
     body {
       font-family: var(--sans);
@@ -54,125 +46,145 @@
     @media print {
       .toolbar { display: none !important; }
       body { background: white; padding-top: 0; }
-      .catalogue-page { break-after: page; }
-      .catalogue-page:last-child { break-after: avoid; }
+      .cat-page { break-after: page; box-shadow: none; margin: 0; }
+      .cat-page:last-child { break-after: avoid; }
     }
 
-    @page { size: A4; margin: 0; }
+    @page { size: A4 portrait; margin: 0; }
 
-    /* ── GRILLE CATALOGUE ── */
-    .catalogue-pages { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+    /* ── WRAPPER ── */
+    .catalogue-pages { display: flex; flex-direction: column; gap: 12px; align-items: center; padding: 12px 0 24px; }
 
-    .catalogue-page {
+    /* ── PAGE A4 ── */
+    .cat-page {
       width: 210mm;
-      min-height: 297mm;
+      height: 297mm;
       background: white;
       box-shadow: 0 2px 20px rgba(0,0,0,0.18);
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
 
-    /* ── ENTÊTE DE PAGE ── */
+    /* ── HEADER ── */
     .cat-header {
-      padding: 14px 24px 12px;
+      padding: 14px 26px 12px;
       border-bottom: 2px solid var(--gold);
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
     }
-    .cat-header-left { display: flex; align-items: center; gap: 14px; }
-    .cat-logo img { height: 52px; width: 52px; object-fit: contain; }
-    .cat-logo-placeholder {
-      width: 52px; height: 52px; background: #f0f0f0;
-      display: flex; align-items: center; justify-content: center;
-      color: #ccc; font-size: 8px; letter-spacing: 1px;
+    .cat-logo img, .cat-logo-ph {
+      height: 56px; width: 56px; object-fit: contain; display: block;
     }
-    .cat-header-title { font-size: 9px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); }
-    .cat-header-supplier { font-family: var(--serif); font-size: 22px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--black); line-height: 1.1; }
+    .cat-logo-ph {
+      background: #f0f0f0; display: flex; align-items: center; justify-content: center;
+      color: #ccc; font-size: 8px; letter-spacing: 1px; text-transform: uppercase;
+    }
+    .cat-header-mid { flex: 1; padding: 0 20px; }
+    .cat-collection { font-size: 9px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; color: var(--gold); margin-bottom: 3px; }
+    .cat-product-name { font-family: var(--serif); font-size: 40px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; color: var(--black); line-height: 1; }
+    .cat-supplier-name { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--gray); margin-top: 5px; }
     .cat-header-right { text-align: right; }
-    .cat-header-company { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); }
-    .cat-header-addr { font-size: 8px; color: var(--light); line-height: 1.5; margin-top: 3px; }
-    .cat-header-page { font-size: 8px; color: var(--light); margin-top: 4px; }
+    .cat-company-name { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); }
+    .cat-company-addr { font-size: 7.5px; color: var(--light); line-height: 1.6; margin-top: 3px; }
+    .cat-page-num { font-size: 7.5px; color: var(--light); margin-top: 4px; }
 
+    /* ── FILET ── */
     .gold-rule {
       height: 2px;
       background: linear-gradient(to right, transparent, var(--gold), #e8c97e, var(--gold), transparent);
+      flex-shrink: 0;
     }
 
-    /* ── GRILLE FICHES ── */
-    .products-grid {
-      flex: 1;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0;
-      padding: 0;
-    }
+    /* ── ZONE PHOTO + DESCRIPTION ── */
+    .cat-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
-    /* ── FICHE PRODUIT ── */
-    .product-card {
-      border-right: 1px solid #e8e8e8;
-      border-bottom: 1px solid #e8e8e8;
-      padding: 14px 16px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .product-card:nth-child(2n) { border-right: none; }
+    .cat-top { display: flex; gap: 0; height: 180px; flex-shrink: 0; border-bottom: 1px solid #e8e8e8; }
 
-    .pc-header { display: flex; gap: 10px; align-items: flex-start; }
-    .pc-photo {
-      width: 80px; height: 60px; flex-shrink: 0;
+    .cat-photo {
+      width: 220px; flex-shrink: 0;
       background: #f7f7f7;
       display: flex; align-items: center; justify-content: center;
-      border: 1px solid #e8e8e8; overflow: hidden;
+      border-right: 1px solid #e8e8e8; overflow: hidden;
     }
-    .pc-photo img { width: 100%; height: 100%; object-fit: contain; }
-    .pc-photo-placeholder { color: #ccc; font-size: 8px; letter-spacing: 1px; text-transform: uppercase; }
+    .cat-photo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .cat-photo-ph { color: #ccc; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; text-align: center; }
 
-    .pc-info { flex: 1; }
-    .pc-collection { font-size: 8px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); margin-bottom: 2px; }
-    .pc-name { font-family: var(--serif); font-size: 16px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--black); line-height: 1.1; }
-    .pc-supplier { font-size: 9px; color: var(--gray); letter-spacing: 1px; margin-top: 2px; }
-    .pc-desc { font-size: 9px; color: #777; line-height: 1.4; margin-top: 3px; }
+    .cat-description { flex: 1; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+    .cat-desc-title { font-size: 9px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); }
+    .cat-desc-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+    .cat-desc-list li { font-family: var(--serif); font-size: 11px; color: var(--black); line-height: 1.5; display: flex; gap: 6px; }
+    .cat-desc-list li::before { content: '—'; color: var(--gold); font-weight: 700; flex-shrink: 0; }
+    .cat-notes { font-size: 9px; color: #bbb; font-style: italic; margin-top: auto; }
 
-    /* ── GAMMES (tarifs) ── */
-    .pc-ranges { display: flex; flex-direction: column; gap: 4px; }
-    .pc-range-row {
-      display: flex; align-items: baseline; justify-content: space-between;
-      padding: 3px 0; border-bottom: 1px dashed #f0f0f0;
+    /* ── GAMMES (PRIX) ── */
+    .cat-ranges { flex-shrink: 0; border-bottom: 1px solid #e8e8e8; padding: 14px 26px; }
+    .cat-section-title { font-size: 9px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+
+    .ranges-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 8px;
     }
-    .pc-range-row:last-child { border-bottom: none; }
-    .pc-range-name { font-size: 9px; font-weight: 600; color: var(--gray); text-transform: uppercase; letter-spacing: 1px; }
-    .pc-range-dims { font-size: 8px; color: #bbb; margin-left: 6px; }
-    .pc-range-price { font-family: var(--serif); font-size: 18px; font-weight: 700; color: var(--black); white-space: nowrap; }
-    .pc-range-price sup { font-size: 10px; vertical-align: top; line-height: 1.5; }
-    .pc-range-ttc { font-size: 7px; color: var(--light); text-align: right; }
+    .range-card {
+      border: 1px solid #d8d8d8;
+      border-top: 3px solid var(--gold);
+      padding: 8px 10px 10px;
+    }
+    .range-name { font-size: 8px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gray); margin-bottom: 2px; }
+    .range-dims { font-size: 7px; color: var(--light); margin-bottom: 8px; }
+    .range-price { font-family: var(--serif); font-size: 28px; font-weight: 700; color: var(--black); line-height: 1; white-space: nowrap; }
+    .range-price sup { font-size: 14px; vertical-align: top; line-height: 1.4; }
+    .range-ttc { font-size: 7px; color: var(--light); margin-top: 1px; }
+
+    /* ── MODULES ── */
+    .cat-modules { flex-shrink: 0; border-bottom: 1px solid #e8e8e8; padding: 10px 26px; }
+    .modules-table { width: 100%; border-collapse: collapse; font-size: 9px; }
+    .modules-table th {
+      text-align: left; font-size: 8px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--gold);
+      border-bottom: 1px solid #e8e8e8; padding: 0 6px 5px 0;
+    }
+    .modules-table th.right { text-align: right; padding-right: 0; padding-left: 6px; }
+    .modules-table td { padding: 4px 6px 4px 0; border-bottom: 1px dashed #f0f0f0; color: var(--black); vertical-align: middle; }
+    .modules-table td.right { text-align: right; padding-right: 0; padding-left: 6px; }
+    .modules-table td.price-cell { font-family: var(--serif); font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .modules-table td.dims-cell { font-size: 7.5px; color: var(--light); }
+    .modules-table tr:last-child td { border-bottom: none; }
+
+    /* ── OPTIONS ── */
+    .cat-options { padding: 10px 26px; }
+    .options-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .opt-chip {
+      border: 1px solid var(--gold);
+      padding: 3px 10px;
+      font-size: 8px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      color: var(--black);
+      display: flex; align-items: center; gap: 5px;
+    }
+    .opt-chip-price { font-family: var(--serif); font-size: 10px; color: var(--gold); }
 
     /* ── FOOTER ── */
     .cat-footer {
       border-top: 1px solid #d8d8d8;
-      padding: 6px 24px;
+      padding: 7px 26px;
       display: flex; align-items: center; justify-content: space-between;
-      margin-top: auto;
+      margin-top: auto; flex-shrink: 0;
     }
-    .cat-footer-left { font-size: 7px; color: var(--light); }
-    .cat-footer-right { font-size: 7px; color: var(--gold); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+    .cat-footer-left { font-size: 7px; color: var(--light); line-height: 1.5; }
+    .cat-footer-center { font-size: 7px; font-weight: 700; color: var(--gold); letter-spacing: 1.5px; text-transform: uppercase; text-align: center; }
+    .cat-footer-right { font-size: 7px; color: var(--light); text-align: right; line-height: 1.5; }
 
-    /* ── EMPTY / LOADING ── */
+    /* ── LOADING / EMPTY ── */
     #loading { padding: 60px; text-align: center; color: #999; font-size: 14px; }
   </style>
 </head>
 <body>
 
-  <!-- Toolbar -->
   <div class="toolbar">
     <span class="toolbar-title" id="toolbar-title">Catalogue produits</span>
+    <span class="toolbar-info" id="toolbar-info"></span>
     <div class="toolbar-actions">
-      <div class="toolbar-filter">
-        <label>Trier par :</label>
-        <select id="sort-select">
-          <option value="name">Nom</option>
-          <option value="collection">Collection</option>
-          <option value="price-asc">Prix croissant</option>
-          <option value="price-desc">Prix décroissant</option>
-        </select>
-      </div>
       <button class="tbtn tbtn-pdf"   id="btn-save-pdf">📄 Sauvegarder PDF</button>
       <button class="tbtn tbtn-print" id="btn-print">🖨 Imprimer</button>
       <button class="tbtn tbtn-close" id="btn-close">✕ Fermer</button>
