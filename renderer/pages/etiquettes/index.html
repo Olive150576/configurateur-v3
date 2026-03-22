@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+  <title>Étiquettes magasin — Configurateur V3</title>
+  <link rel="stylesheet" href="../../assets/styles/main.css">
+  <style>
+    body { overflow: hidden; }
+
+    /* ── Layout global ── */
+    .etiquette-layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* ── Panneau catalogue (gauche) ── */
+    .catalog-panel {
+      border-right: 1px solid var(--color-gray-200);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--color-gray-50);
+    }
+    .catalog-search {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--color-gray-200);
+      flex-shrink: 0;
+    }
+    .catalog-search input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--color-gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      background: white;
+    }
+    .catalog-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .catalog-empty {
+      text-align: center;
+      padding: 24px 16px;
+      color: var(--color-gray-400);
+      font-size: 13px;
+    }
+
+    /* Carte produit */
+    .product-card {
+      background: white;
+      border: 1px solid var(--color-gray-200);
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 5px;
+      cursor: pointer;
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+    .product-card:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    .product-card.selected {
+      border-color: #c8a96e;
+      background: #fffdf5;
+      box-shadow: 0 0 0 2px rgba(200,169,110,0.2);
+    }
+    .product-card-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-gray-800);
+      line-height: 1.3;
+    }
+    .product-card-meta {
+      font-size: 11px;
+      color: var(--color-gray-500);
+      margin-top: 2px;
+    }
+
+    /* ── Panneau config (droite) ── */
+    .config-panel {
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 16px 20px;
+      gap: 16px;
+    }
+
+    /* État vide */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--color-gray-400);
+      text-align: center;
+      gap: 10px;
+    }
+    .empty-state-icon { font-size: 44px; }
+    .empty-state p { font-size: 14px; }
+
+    /* Section config */
+    .config-section {
+      background: white;
+      border: 1px solid var(--color-gray-200);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .config-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #c8a96e;
+      margin-bottom: 12px;
+    }
+
+    .form-group { margin-bottom: 12px; }
+    .form-group:last-child { margin-bottom: 0; }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-gray-700);
+      margin-bottom: 5px;
+    }
+    .form-group input[type="text"] {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--color-gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .form-hint { font-size: 11px; color: var(--color-gray-400); margin-top: 3px; }
+
+    /* Checkboxes */
+    .check-list { display: flex; flex-direction: column; gap: 5px; }
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--color-gray-200);
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.12s;
+    }
+    .check-item:hover { background: #fafafa; }
+    .check-item.checked { background: #f0f7ff; border-color: #bcd4f0; }
+    .check-item input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; flex-shrink: 0; }
+    .check-item-name { flex: 1; font-weight: 600; }
+    .check-item-price { font-size: 12px; color: var(--color-gray-400); }
+    .check-limit-note { font-size: 11px; color: #c8a96e; font-style: italic; margin-top: 4px; }
+
+    /* Aperçu miniature */
+    .preview-mini {
+      border: 1px solid #d8d8d8;
+      border-radius: 6px;
+      overflow: hidden;
+      background: white;
+    }
+    .preview-mini-header {
+      background: linear-gradient(to right, #fdf8ee, #fffcf5);
+      border-bottom: 2px solid #c8a96e;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .preview-mini-logo {
+      width: 28px; height: 28px;
+      background: #eee; border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 7px; color: #aaa; overflow: hidden;
+    }
+    .preview-mini-logo img { width: 28px; height: 28px; object-fit: contain; }
+    .preview-mini-name {
+      font-family: Georgia, serif;
+      font-size: 15px; font-weight: 700;
+      letter-spacing: 3px; text-transform: uppercase; color: #1a1a1a;
+    }
+    .preview-mini-photo {
+      height: 72px;
+      background: #f0f0f0;
+      display: flex; align-items: center; justify-content: center;
+      color: #ccc; font-size: 11px;
+      overflow: hidden;
+    }
+    .preview-mini-photo img { max-height: 72px; max-width: 100%; object-fit: contain; }
+    .preview-mini-band {
+      border-top: 1px solid #c8a96e;
+      border-bottom: 1px solid #c8a96e;
+      padding: 3px 8px;
+      text-align: center;
+      font-size: 8px; letter-spacing: 2px;
+      text-transform: uppercase; color: #1a1a1a;
+    }
+    .preview-mini-prices { display: flex; gap: 5px; padding: 8px 10px; }
+    .preview-mini-card {
+      flex: 1;
+      border: 1px solid #e0e0e0;
+      border-top: 2px solid #c8a96e;
+      padding: 5px;
+      border-radius: 2px;
+    }
+    .preview-mini-range { font-size: 8px; font-weight: 700; text-transform: uppercase; }
+    .preview-mini-price { font-size: 13px; font-family: Georgia, serif; font-weight: 700; }
+
+    /* ── Builder de configurations ── */
+    .builder-select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--color-gray-200);
+      border-radius: 6px;
+      font-size: 13px;
+      background: white;
+    }
+
+    .builder-option-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border: 1px solid var(--color-gray-200);
+      border-radius: 6px;
+      margin-bottom: 5px;
+    }
+    .builder-option-name { flex: 1; font-size: 13px; font-weight: 600; }
+    .builder-option-unit { font-size: 11px; color: var(--color-gray-400); white-space: nowrap; }
+
+    .qty-control { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .qty-btn {
+      width: 26px; height: 26px;
+      border: 1px solid var(--color-gray-300);
+      border-radius: 4px;
+      background: white;
+      cursor: pointer;
+      font-size: 14px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .qty-btn:hover { background: #f0f0f0; }
+    .qty-input {
+      width: 36px; height: 26px;
+      border: 1px solid var(--color-gray-200);
+      border-radius: 4px;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .builder-price-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0 12px;
+      border-top: 1px solid var(--color-gray-100);
+      margin-top: 10px;
+    }
+    .builder-price-label { font-size: 12px; font-weight: 600; color: var(--color-gray-600); }
+    .builder-price-value { font-size: 18px; font-weight: 700; color: #c8a96e; }
+
+    .btn-add-tile {
+      width: 100%;
+      background: #c8a96e;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-add-tile:hover { background: #b8995e; }
+    .btn-add-tile:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── Liste des tuiles créées ── */
+    .tile-created-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
+      border: 1px solid var(--color-gray-200);
+      border-radius: 6px;
+      margin-bottom: 5px;
+      background: white;
+    }
+    .tile-created-info { flex: 1; }
+    .tile-created-title { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #1a1a1a; }
+    .tile-created-price { font-size: 13px; color: #c8a96e; font-weight: 600; margin-top: 2px; }
+    .tile-remove-btn {
+      width: 24px; height: 24px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: white;
+      cursor: pointer;
+      font-size: 14px; color: #999;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .tile-remove-btn:hover { background: #fee2e2; color: #c00; border-color: #f99; }
+
+    .tiles-limit-note { font-size: 11px; color: #c8a96e; font-style: italic; margin-top: 4px; }
+
+    /* Bouton imprimer */
+    .btn-print-large {
+      width: 100%;
+      background: #1e3a5f;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 13px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-print-large:hover { background: #16304f; }
+    .btn-print-large:disabled { opacity: 0.45; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- SIDEBAR APP -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <a href="../menu/index.html" class="back-link">← Accueil</a>
+      <h2>🏷 Étiquettes</h2>
+    </div>
+  </aside>
+
+  <!-- CONTENU -->
+  <div class="main-content" style="padding:0;display:flex;flex-direction:column;overflow:hidden">
+
+    <header class="page-header" style="flex-shrink:0">
+      <h1>Étiquettes magasin</h1>
+      <div class="header-actions">
+        <span id="loading-indicator" style="font-size:13px;color:#888;display:none">Chargement…</span>
+      </div>
+    </header>
+
+    <div class="page-body" style="flex:1;overflow:hidden;padding:0">
+      <div id="toast-container" style="position:fixed;bottom:20px;right:20px;z-index:9999"></div>
+
+      <div class="etiquette-layout">
+
+        <!-- ── Colonne gauche : liste produits ── -->
+        <div class="catalog-panel">
+          <div class="catalog-search">
+            <input type="text" id="catalog-filter"
+              placeholder="🔍  Filtrer les produits…" autocomplete="off">
+          </div>
+          <div class="catalog-list" id="catalog-list">
+            <div class="catalog-empty">Chargement…</div>
+          </div>
+        </div>
+
+        <!-- ── Colonne droite : config + aperçu ── -->
+        <div class="config-panel" id="config-panel">
+
+          <!-- Vide -->
+          <div class="empty-state" id="empty-state">
+            <div class="empty-state-icon">🏷</div>
+            <p>Sélectionnez un produit<br>dans la liste pour configurer son étiquette.</p>
+          </div>
+
+          <!-- Config (caché jusqu'à sélection) -->
+          <div id="config-content" style="display:none;flex-direction:column;gap:16px">
+
+            <!-- Infos tissu / badge -->
+            <div class="config-section">
+              <div class="config-section-title">Informations étiquette</div>
+              <div class="form-group">
+                <label>Référence tissu / coloris</label>
+                <input type="text" id="input-tissu"
+                  placeholder="Ex : CAT. B — Ref. OASIS GRIS PERLE">
+                <div class="form-hint">Affiché dans le bandeau central.</div>
+              </div>
+              <div class="form-group">
+                <label>Badge photo <span style="font-weight:400;color:#aaa">(optionnel)</span></label>
+                <input type="text" id="input-badge" placeholder="Ex : NOUVEAUTÉ, EXCLUSIVITÉ…">
+                <div class="form-hint">Apparaît en haut à droite de la photo.</div>
+              </div>
+            </div>
+
+            <!-- ── Builder de configuration ── -->
+            <div class="config-section" id="builder-section">
+              <div class="config-section-title">Construire une configuration</div>
+
+              <!-- Gamme de tarification (visible si le produit a des modules) -->
+              <div class="form-group" id="builder-range-group" style="display:none">
+                <label style="font-size:12px;font-weight:600;color:var(--color-gray-700);display:block;margin-bottom:5px">
+                  Gamme de tarification
+                </label>
+                <select id="builder-range" class="builder-select"></select>
+                <div class="form-hint">Tarif utilisé pour calculer le prix des modules.</div>
+              </div>
+
+              <!-- Base : module ou gamme -->
+              <div class="form-group" id="builder-base-group">
+                <label id="builder-base-label" style="font-size:12px;font-weight:600;color:var(--color-gray-700);display:block;margin-bottom:5px">
+                  Module principal
+                </label>
+                <select id="builder-base" class="builder-select"></select>
+              </div>
+
+              <!-- Options avec quantité -->
+              <div id="builder-options-container" style="display:none">
+                <div style="font-size:12px;font-weight:600;color:var(--color-gray-700);margin:10px 0 6px">
+                  Ajouter des options
+                </div>
+                <div id="builder-options"></div>
+              </div>
+
+              <!-- Prix calculé -->
+              <div class="builder-price-row">
+                <span class="builder-price-label">Prix de vente TTC :</span>
+                <span class="builder-price-value" id="builder-price">—</span>
+              </div>
+
+              <button class="btn-add-tile" id="btn-add-tile">+ Ajouter cette configuration</button>
+            </div>
+
+            <!-- ── Configurations créées ── -->
+            <div class="config-section">
+              <div class="config-section-title">
+                Configurations à afficher
+                <span style="font-weight:400;color:#aaa;font-size:11px"> (3 par ligne)</span>
+              </div>
+              <div id="tiles-created">
+                <p style="font-size:12px;color:#aaa">Aucune configuration. Créez-en avec le formulaire ci-dessus.</p>
+              </div>
+              <div class="tiles-limit-note" id="tiles-limit-note" style="display:none">
+                Vous pouvez créer autant de configurations que nécessaire.
+              </div>
+            </div>
+
+            <!-- Aperçu -->
+            <div class="config-section">
+              <div class="config-section-title">Aperçu</div>
+              <div class="preview-mini">
+                <div class="preview-mini-header">
+                  <div class="preview-mini-logo" id="prev-logo">Logo</div>
+                  <div class="preview-mini-name" id="prev-name">—</div>
+                </div>
+                <div class="preview-mini-photo" id="prev-photo">Photo produit</div>
+                <div class="preview-mini-band" id="prev-tissu">Tissu au choix</div>
+                <div class="preview-mini-prices" id="prev-prices"></div>
+              </div>
+            </div>
+
+            <!-- Bouton -->
+            <button class="btn-print-large" id="btn-open-print">
+              🖨 Ouvrir l'aperçu / Imprimer
+            </button>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../../shared/utils.js"></script>
+<script src="etiquettes.js"></script>
+</body>
+</html>

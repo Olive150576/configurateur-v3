@@ -1,23 +1,51 @@
 {
   "name": "configurateur-v3",
   "version": "1.0.0",
-  "description": "",
+  "description": "Configurateur de devis mobilier",
   "main": "main/index.js",
+  "author": "Olive150576",
+  "license": "ISC",
+  "type": "commonjs",
   "scripts": {
     "start": "node start.js",
     "dev": "node start.js --dev",
-    "rebuild": "electron-rebuild"
+    "rebuild": "electron-rebuild",
+    "dist": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "devDependencies": {
     "cross-env": "^10.1.0",
     "electron": "^33.4.11",
+    "electron-builder": "^26.8.1",
     "electron-rebuild": "^3.2.9"
   },
   "dependencies": {
     "better-sqlite3": "^12.8.0"
+  },
+  "build": {
+    "appId": "com.olive.configurateur-v3",
+    "productName": "Configurateur V3",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main/**/*",
+      "renderer/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "${productName}-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.exe"
+    },
+    "npmRebuild": true,
+    "nodeGypRebuild": false
   }
 }

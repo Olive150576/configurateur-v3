@@ -34,8 +34,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadCompanyConfig() {
-  const keys = ['company_name', 'company_address', 'company_city', 'company_zip',
-                 'company_phone', 'company_email'];
+  const keys = ['company_name', 'company_trade_name', 'company_address', 'company_city', 'company_zip',
+                 'company_phone', 'company_email', 'company_siret', 'company_ape', 'company_capital', 'company_vat'];
   const results = await Promise.all(keys.map(k => window.api.app.getConfig(k)));
   const obj = {};
   keys.forEach((k, i) => { obj[k] = (results[i].ok ? results[i].data : '') || ''; });
@@ -73,7 +73,7 @@ function setupToolbar(doc, company) {
         `Merci de bien vouloir confirmer la réception et le délai de livraison.`,
         ``,
         `Cordialement`,
-        company.company_name || '',
+        company.company_trade_name || company.company_name || '',
       ].join('\n');
 
       await window.api.print.openEmail({
@@ -128,7 +128,7 @@ function renderHeader(num, date, logo, company) {
       </div>
       <div style="text-align:right">
         ${logo ? `<img src="${logo}" class="sup-logo" alt="logo" style="margin-bottom:6px">` : ''}
-        <div style="font-size:13px;font-weight:700;color:#1a1a1a">${esc(company.company_name || '')}</div>
+        <div style="font-size:13px;font-weight:700;color:#1a1a1a">${esc(company.company_trade_name || company.company_name || '')}</div>
         ${companyLines.map(l => `<div style="font-size:10px;color:#6b7280;line-height:1.6">${esc(l)}</div>`).join('')}
       </div>
     </div>
@@ -213,19 +213,24 @@ function renderSupplierGroup(group) {
 
 function renderFooter(company) {
   const parts = [
-    company.company_name,
+    company.company_trade_name || company.company_name,
     company.company_address,
     [company.company_zip, company.company_city].filter(Boolean).join(' '),
     company.company_phone,
     company.company_email,
   ].filter(Boolean);
 
+  const legalParts = [
+    company.company_siret   ? `SIRET ${company.company_siret}`     : '',
+    company.company_ape     ? `APE ${company.company_ape}`         : '',
+    company.company_vat     ? `TVA ${company.company_vat}`         : '',
+    company.company_capital ? `Capital ${company.company_capital}` : '',
+  ].filter(Boolean);
+
   return `
     <div class="sup-footer">
-      <div style="font-size:8px;color:#6b7280;font-style:italic;margin-bottom:5px;padding:5px 10px;border:1px solid #e5e7eb;border-radius:3px;display:inline-block">
-        Ce bon de commande tient lieu de facture une fois acquitté.
-      </div>
       <div>${parts.map(esc).join(' · ')}</div>
+      ${legalParts.length ? `<div>${legalParts.map(esc).join(' · ')}</div>` : ''}
     </div>
   `;
 }

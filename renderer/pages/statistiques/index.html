@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Statistiques — Configurateur V3</title>
+  <link rel="stylesheet" href="../../assets/styles/main.css">
+  <style>
+    /* ===== PÉRIODE ===== */
+    .period-tabs {
+      display: flex;
+      gap: 6px;
+    }
+    .period-tab {
+      padding: 5px 16px;
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: white;
+      color: var(--color-gray-500);
+      transition: all .15s;
+    }
+    .period-tab.active {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: white;
+    }
+
+    /* ===== KPI CARDS ===== */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .kpi-card {
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      padding: 16px;
+      border-top: 3px solid var(--color-primary);
+    }
+    .kpi-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--color-gray-400);
+      margin-bottom: 6px;
+    }
+    .kpi-value {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--color-gray-900);
+      line-height: 1;
+    }
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--color-gray-400);
+      margin-top: 4px;
+    }
+    .kpi-card.accent { border-top-color: #059669; }
+    .kpi-card.warn   { border-top-color: #d97706; }
+    .kpi-card.purple { border-top-color: #7c3aed; }
+
+    /* ===== SECTIONS ===== */
+    .stats-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .stats-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    /* ===== GRAPHIQUE BARRES CSS ===== */
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      height: 140px;
+      padding: 0 4px;
+    }
+    .bar-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+      justify-content: flex-end;
+    }
+    .bar-val {
+      font-size: 9px;
+      color: var(--color-gray-500);
+      margin-bottom: 3px;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .bar-fill {
+      width: 100%;
+      border-radius: 3px 3px 0 0;
+      background: var(--color-primary);
+      opacity: .85;
+      transition: height .4s ease;
+      min-height: 2px;
+    }
+    .bar-fill.current { opacity: 1; background: #059669; }
+    .bar-label {
+      font-size: 9px;
+      color: var(--color-gray-400);
+      margin-top: 5px;
+      text-align: center;
+    }
+    .bar-axis {
+      border-top: 1px solid var(--color-border);
+      margin: 0 4px 0;
+    }
+
+    /* ===== CLASSEMENTS (barres horizontales) ===== */
+    .rank-list { display: flex; flex-direction: column; gap: 8px; }
+    .rank-item { display: flex; flex-direction: column; gap: 3px; }
+    .rank-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .rank-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-gray-800);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 70%;
+    }
+    .rank-meta {
+      font-size: 11px;
+      color: var(--color-gray-500);
+      white-space: nowrap;
+    }
+    .rank-bar-bg {
+      height: 6px;
+      background: var(--color-gray-100);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .rank-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: var(--color-primary);
+      transition: width .5s ease;
+    }
+    .rank-bar-fill.green  { background: #059669; }
+    .rank-bar-fill.amber  { background: #d97706; }
+    .rank-bar-fill.purple { background: #7c3aed; }
+
+    /* ===== VIDE ===== */
+    .stat-empty {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--color-gray-400);
+      font-size: 13px;
+    }
+    .stat-empty-icon { font-size: 32px; margin-bottom: 8px; }
+
+    /* ===== HEATMAP ===== */
+    .heatmap-wrap { overflow-x: auto; }
+    .heatmap-table {
+      border-collapse: separate;
+      border-spacing: 3px;
+      font-size: 11px;
+    }
+    .heatmap-table th {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--color-gray-400);
+      text-align: center;
+      padding: 0 6px 6px;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+    .heatmap-table td.month-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--color-gray-500);
+      padding-right: 10px;
+      white-space: nowrap;
+    }
+    .heatmap-cell {
+      width: 72px;
+      height: 52px;
+      border-radius: 6px;
+      text-align: center;
+      vertical-align: middle;
+      cursor: default;
+      transition: transform .1s;
+      position: relative;
+    }
+    .heatmap-cell:hover { transform: scale(1.08); z-index: 1; }
+    .heatmap-cell-nb {
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .heatmap-cell-ca {
+      font-size: 9px;
+      margin-top: 2px;
+      opacity: .85;
+    }
+    .heatmap-empty {
+      background: #f8fafc;
+      color: var(--color-gray-300);
+      font-size: 12px;
+    }
+
+    /* ===== ALERTES INACTIFS ===== */
+    .alert-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .alert-table th {
+      padding: 8px 12px;
+      text-align: left;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--color-gray-400);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .alert-table td { padding: 10px 12px; border-bottom: 1px solid var(--color-gray-100); }
+    .alert-table tr:last-child td { border-bottom: none; }
+    .badge-never  { background: #fee2e2; color: #991b1b; }
+    .badge-old    { background: #fef3c7; color: #92400e; }
+
+    /* ===== COMBINAISONS ===== */
+    .combo-pair {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-gray-800);
+    }
+    .combo-pair-sep { color: var(--color-primary); margin: 0 4px; font-weight: 400; }
+
+    /* ===== ONGLETS SECTIONS ===== */
+    .section-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 2px solid var(--color-border);
+      margin-bottom: 20px;
+    }
+    .section-tab {
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-gray-500);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all .15s;
+    }
+    .section-tab.active {
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
+    }
+    .section-panel { display: none; }
+    .section-panel.active { display: block; }
+  </style>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ==================== SIDEBAR ==================== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <a href="../menu/index.html" class="back-link">← Accueil</a>
+      <h2>📊 Statistiques</h2>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-title">Période</div>
+      <div class="sidebar-item active" data-period="all">
+        <span class="icon">♾</span> Tout afficher
+      </div>
+      <div class="sidebar-item" data-period="year">
+        <span class="icon">📅</span> Année en cours
+      </div>
+      <div class="sidebar-item" data-period="month">
+        <span class="icon">🗓</span> Mois en cours
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ==================== CONTENU PRINCIPAL ==================== -->
+  <div class="main-content">
+
+    <header class="page-header">
+      <h1 id="page-title">Statistiques globales</h1>
+      <div class="header-actions">
+        <span id="loading-indicator" style="font-size:13px;color:var(--color-gray-400)">Chargement…</span>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div id="toast-container"></div>
+
+      <!-- KPIs -->
+      <div class="kpi-row">
+        <div class="kpi-card accent">
+          <div class="kpi-label">Chiffre d'affaires</div>
+          <div class="kpi-value" id="kpi-ca">—</div>
+          <div class="kpi-sub">commandes validées</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Panier moyen</div>
+          <div class="kpi-value" id="kpi-panier">—</div>
+          <div class="kpi-sub">par commande</div>
+        </div>
+        <div class="kpi-card warn">
+          <div class="kpi-label">Taux de transformation</div>
+          <div class="kpi-value" id="kpi-taux">—</div>
+          <div class="kpi-sub">devis → commande</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Commandes</div>
+          <div class="kpi-value" id="kpi-commandes">—</div>
+          <div class="kpi-sub" id="kpi-devis-sub">—</div>
+        </div>
+        <div class="kpi-card purple">
+          <div class="kpi-label">Devis émis</div>
+          <div class="kpi-value" id="kpi-devis">—</div>
+          <div class="kpi-sub">hors brouillons</div>
+        </div>
+      </div>
+
+      <!-- Onglets sections -->
+      <div class="section-tabs">
+        <div class="section-tab active" data-section="ventes">📈 Ventes</div>
+        <div class="section-tab" data-section="produits">📦 Produits</div>
+        <div class="section-tab" data-section="fournisseurs">🏭 Fournisseurs</div>
+        <div class="section-tab" data-section="finitions">🎨 Finitions & Options</div>
+        <div class="section-tab" data-section="saisonnalite">🌡 Saisonnalité</div>
+        <div class="section-tab" data-section="combinaisons">🔗 Combinaisons</div>
+        <div class="section-tab" data-section="alertes">⚠️ Alertes</div>
+      </div>
+
+      <!-- ======= VENTES ======= -->
+      <div id="section-ventes" class="section-panel active">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">CA mensuel — 12 derniers mois</span>
+          </div>
+          <div class="card-body" style="padding-bottom:8px">
+            <div class="bar-chart" id="chart-mensuel"></div>
+            <div class="bar-axis"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= PRODUITS ======= -->
+      <div id="section-produits" class="section-panel">
+        <div class="stats-grid-2">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Top produits — quantité commandée</span>
+            </div>
+            <div class="card-body">
+              <div class="rank-list" id="rank-produits-qty"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Top produits — chiffre d'affaires</span>
+            </div>
+            <div class="card-body">
+              <div class="rank-list" id="rank-produits-ca"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= FOURNISSEURS ======= -->
+      <div id="section-fournisseurs" class="section-panel">
+        <div class="stats-grid-2">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Fournisseurs — lignes commandées</span>
+            </div>
+            <div class="card-body">
+              <div class="rank-list" id="rank-sup-qty"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Fournisseurs — chiffre d'affaires</span>
+            </div>
+            <div class="card-body">
+              <div class="rank-list" id="rank-sup-ca"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= FINITIONS ======= -->
+      <div id="section-finitions" class="section-panel">
+
+        <!-- KPIs mécanisme -->
+        <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+          <div class="kpi-card warn">
+            <div class="kpi-label">Commandes avec Relax</div>
+            <div class="kpi-value" id="kpi-pct-relax">—</div>
+            <div class="kpi-sub" id="kpi-relax-sub">—</div>
+          </div>
+          <div class="kpi-card accent">
+            <div class="kpi-label">Produits avec mécanisme</div>
+            <div class="kpi-value" id="kpi-pct-mechanism">—</div>
+            <div class="kpi-sub" id="kpi-mechanism-sub">—</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Produits fixes</div>
+            <div class="kpi-value" id="kpi-pct-fixe">—</div>
+            <div class="kpi-sub">sans mécanisme</div>
+          </div>
+          <div class="kpi-card purple">
+            <div class="kpi-label">Commandes avec options</div>
+            <div class="kpi-value" id="kpi-pct-avec-opt">—</div>
+            <div class="kpi-sub" id="kpi-opt-sub">—</div>
+          </div>
+        </div>
+
+        <!-- Coloris + Options quantité -->
+        <div class="stats-grid-2" style="margin-bottom:16px">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">🎨 Coloris les plus choisis</span>
+            </div>
+            <div class="card-body">
+              <div class="rank-list" id="rank-coloris"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">✨ Options les plus demandées</span>
+              <span style="font-size:11px;color:var(--color-gray-400)">par quantité commandée</span>
+            </div>
+            <div class="card-body">
+              <div class="rank-list" id="rank-options"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top 5 options CA + Modules -->
+        <div class="stats-grid-2">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">💰 Top 5 options — valeur ajoutée</span>
+              <span style="font-size:11px;color:var(--color-gray-400)">CA généré par l'option</span>
+            </div>
+            <div class="card-body">
+              <div class="rank-list" id="rank-options-ca"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">🧩 Modules les plus commandés</span>
+            </div>
+            <div class="card-body">
+              <div class="rank-list" id="rank-modules"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ======= SAISONNALITÉ ======= -->
+      <div id="section-saisonnalite" class="section-panel">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Heatmap saisonnalité — commandes par mois et par année</span>
+            <span style="font-size:11px;color:var(--color-gray-400)">Intensité = chiffre d'affaires · Chiffre = nb commandes</span>
+          </div>
+          <div class="card-body">
+            <div class="heatmap-wrap">
+              <div id="heatmap-container"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= COMBINAISONS ======= -->
+      <div id="section-combinaisons" class="section-panel">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Top produits commandés ensemble</span>
+            <span style="font-size:11px;color:var(--color-gray-400)">Paires apparaissant dans ≥ 2 commandes</span>
+          </div>
+          <div class="card-body">
+            <div class="rank-list" id="rank-combinaisons"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= ALERTES ======= -->
+      <div id="section-alertes" class="section-panel">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Produits inactifs — aucune commande depuis 6 mois</span>
+            <span id="badge-inactifs" class="badge badge-gray" style="margin-left:8px">0</span>
+          </div>
+          <div id="alertes-empty" class="empty-state" style="display:none">
+            <div class="empty-icon">✅</div>
+            <h3>Tous les produits sont actifs</h3>
+            <p>Aucun produit n'est inactif depuis plus de 6 mois.</p>
+          </div>
+          <div class="table-wrapper" id="alertes-table-wrapper">
+            <table class="alert-table">
+              <thead>
+                <tr>
+                  <th>Produit</th>
+                  <th>Fournisseur</th>
+                  <th>Collection</th>
+                  <th>Dernière commande</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody id="alertes-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="../../shared/utils.js"></script>
+<script src="./statistiques.js"></script>
+</body>
+</html>

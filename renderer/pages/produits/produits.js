@@ -595,9 +595,10 @@ function openRangeModal(idx = null) {
   state.editingRangeIdx = idx;
   const range = idx !== null ? state.editingRanges[idx] : null;
 
-  document.getElementById('r-id').value    = range?.id         ?? '';
-  document.getElementById('r-name').value  = range?.name       ?? '';
-  document.getElementById('r-price').value = range?.base_price ?? '';
+  document.getElementById('r-id').value         = range?.id         ?? '';
+  document.getElementById('r-name').value        = range?.name       ?? '';
+  document.getElementById('r-price').value       = range?.base_price ?? '';
+  document.getElementById('r-dimensions').value  = range?.dimensions ?? '';
   document.getElementById('r-id').disabled = idx !== null; // ID non modifiable en édition
 
   ['r-id','r-name','r-price'].forEach(id => {
@@ -623,6 +624,7 @@ function handleSaveRange() {
   const id    = document.getElementById('r-id').value.trim();
   const name  = document.getElementById('r-name').value.trim();
   const price = parseFloat(document.getElementById('r-price').value);
+  const dims  = document.getElementById('r-dimensions').value.trim();
 
   let valid = true;
   if (!id)          { showFieldError('r-id',    'err-r-id',    'ID obligatoire');    valid = false; }
@@ -642,10 +644,10 @@ function handleSaveRange() {
       showFieldError('r-id', 'err-r-id', 'Cet ID existe déjà');
       return;
     }
-    state.editingRanges.push({ id, name, base_price: price });
+    state.editingRanges.push({ id, name, base_price: price, dimensions: dims });
   } else {
     state.editingRanges[state.editingRangeIdx] = {
-      ...state.editingRanges[state.editingRangeIdx], name, base_price: price
+      ...state.editingRanges[state.editingRangeIdx], name, base_price: price, dimensions: dims
     };
   }
 

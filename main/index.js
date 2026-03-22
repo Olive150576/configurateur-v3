@@ -16,6 +16,7 @@ const clientHandlers   = require('./ipc/client.handlers');
 const supplierHandlers = require('./ipc/supplier.handlers');
 const appHandlers      = require('./ipc/app.handlers');
 const printHandlers    = require('./ipc/print.handlers');
+const statsHandlers    = require('./ipc/stats.handlers');
 
 let mainWindow = null;
 
@@ -60,6 +61,7 @@ app.whenReady().then(async () => {
   supplierHandlers.register(ipcMain);
   appHandlers.register(ipcMain);
   printHandlers.register(ipcMain);
+  statsHandlers.register(ipcMain);
 
   // Démarrer le scheduler de sauvegarde automatique
   const BackupScheduler = require('./services/BackupScheduler');

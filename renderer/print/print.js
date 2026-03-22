@@ -43,8 +43,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadCompanyConfig() {
   const keys = [
-    'company_name', 'company_address', 'company_city', 'company_zip',
-    'company_phone', 'company_email', 'company_siret', 'company_vat',
+    'company_name', 'company_trade_name', 'company_address', 'company_city', 'company_zip',
+    'company_phone', 'company_email', 'company_siret', 'company_ape', 'company_capital', 'company_vat',
   ];
   const results = await Promise.all(keys.map(k => window.api.app.getConfig(k)));
   const obj = {};
@@ -119,7 +119,7 @@ function renderDocument(doc, company, logo, vatRate) {
       ${renderLinesTable(lines, vatRate)}
     </div>
     ${renderTotals(doc, totalHT, vatAmt, totalTTC, vatRate)}
-    ${renderFooter(company)}
+    ${renderFooter(company, doc.type)}
   `;
 }
 
@@ -180,7 +180,7 @@ function renderHeader(doc, company, logo, info) {
     <div class="hdr-right">
       ${logo
         ? `<img class="hdr-logo" src="${logo}" alt="Logo">`
-        : `<div class="hdr-company-name">${esc(company.company_name || '')}</div>`}
+        : `<div class="hdr-company-name">${esc(company.company_trade_name || company.company_name || '')}</div>`}
     </div>
   `;
 
@@ -193,7 +193,7 @@ function renderCompanyClient(company, client) {
   const companyHtml = `
     <div class="col-company">
       <span class="col-label">Vendeur</span>
-      <div class="col-company-name">${esc(company.company_name || '')}</div>
+      <div class="col-company-name">${esc(company.company_trade_name || company.company_name || '')}</div>
       ${company.company_address ? `<div class="col-company-detail">${esc(company.company_address)}</div>` : ''}
       ${(company.company_zip || company.company_city)
         ? `<div class="col-company-detail">${esc([company.company_zip, company.company_city].filter(Boolean).join(' '))}</div>`
@@ -414,20 +414,27 @@ function renderTotals(doc, totalHT, vatAmt, totalTTC, vatRate) {
 
 // ==================== FOOTER ====================
 
-function renderFooter(company) {
+function renderFooter(company, docType) {
   const contactParts = [
-    company.company_name,
+    company.company_trade_name || company.company_name,
     company.company_phone,
     company.company_email,
   ].filter(Boolean);
 
   const legalParts = [
-    company.company_siret ? `SIRET ${company.company_siret}` : '',
-    company.company_vat   ? `TVA ${company.company_vat}`     : '',
+    company.company_siret   ? `SIRET ${company.company_siret}`         : '',
+    company.company_ape     ? `APE ${company.company_ape}`             : '',
+    company.company_vat     ? `TVA ${company.company_vat}`             : '',
+    company.company_capital ? `Capital ${company.company_capital}`     : '',
   ].filter(Boolean);
 
   return `
     <div class="doc-footer">
+      ${docType === 'commande' ? `
+        <div style="font-size:8px;color:#6b7280;font-style:italic;margin-bottom:5px;padding:5px 10px;border:1px solid #e5e7eb;border-radius:3px;display:inline-block">
+          Ce bon de commande tient lieu de facture une fois acquitté.
+        </div>
+      ` : ''}
       <div class="footer-contact-centered">
         ${contactParts.map(esc).join(' · ')}
         ${legalParts.length

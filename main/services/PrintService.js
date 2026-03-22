@@ -104,4 +104,37 @@ async function openSupplierDocument(documentId) {
   return { opened: true };
 }
 
-module.exports = { openDocument, openSupplierDocument, savePDF, saveAndEmail };
+/**
+ * Ouvre la fenêtre d'impression pour une étiquette magasin
+ * @param {string} productId
+ * @param {object} config { tissu, badge, rangeIds, optionIds }
+ */
+async function openEtiquette(productId, config = {}) {
+  const { tissu = '', badge = '', configs = '[]' } = config;
+
+  const win = new BrowserWindow({
+    width:  880,
+    height: 1160,
+    minWidth: 700,
+    title: 'Étiquette magasin',
+    webPreferences: {
+      preload: path.join(__dirname, '../preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  const htmlPath = path.join(__dirname, '../../renderer/print/etiquette.html');
+  await win.loadFile(htmlPath, {
+    query: {
+      productId,
+      tissu,
+      badge,
+      configs: encodeURIComponent(configs),
+    },
+  });
+
+  return { opened: true };
+}
+
+module.exports = { openDocument, openSupplierDocument, savePDF, saveAndEmail, openEtiquette };

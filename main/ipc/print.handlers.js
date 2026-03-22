@@ -27,6 +27,11 @@ function register(ipcMain) {
     const win = BrowserWindow.fromWebContents(event.sender);
     return wrap(() => PrintService.saveAndEmail(win, opts));
   });
+
+  // Étiquette magasin
+  ipcMain.handle('etiquette:print', (_, productId, config) =>
+    wrap(() => PrintService.openEtiquette(productId, config || {}))
+  );
 }
 
 module.exports = { register };

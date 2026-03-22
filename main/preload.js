@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('api', {
     findOrCreate: (name)     => ipcRenderer.invoke('suppliers:findOrCreate', name),
     create:       (data)     => ipcRenderer.invoke('suppliers:create', data),
     update:       (id, data) => ipcRenderer.invoke('suppliers:update', id, data),
+    search:       (term)     => ipcRenderer.invoke('suppliers:search', term),
     archive:      (id)       => ipcRenderer.invoke('suppliers:archive', id),
   },
 
@@ -61,6 +62,17 @@ contextBridge.exposeInMainWorld('api', {
   print: {
     savePDF:   (defaultName) => ipcRenderer.invoke('print:savePDF', defaultName),
     openEmail: (opts)        => ipcRenderer.invoke('print:openEmail', opts),
+  },
+
+  // ==================== ÉTIQUETTES ====================
+  etiquette: {
+    print: (productId, config) => ipcRenderer.invoke('etiquette:print', productId, config),
+  },
+
+  // ==================== STATISTIQUES ====================
+  stats: {
+    get:         (period) => ipcRenderer.invoke('stats:get', period),
+    getAdvanced: ()       => ipcRenderer.invoke('stats:getAdvanced'),
   },
 
   // ==================== APP ====================

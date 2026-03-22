@@ -111,9 +111,9 @@ function create(data) {
       const newRangeId = generateId('range');
       rangeIdMap[r.id] = newRangeId;
       db.prepare(`
-        INSERT INTO ranges (id, product_id, name, base_price, sort_order)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(newRangeId, id, r.name.trim(), r.base_price, i);
+        INSERT INTO ranges (id, product_id, name, base_price, dimensions, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(newRangeId, id, r.name.trim(), r.base_price, r.dimensions?.trim() || '', i);
     }
 
     // Modules
@@ -194,9 +194,9 @@ function update(id, data) {
       for (let i = 0; i < data.ranges.length; i++) {
         const r = data.ranges[i];
         db.prepare(`
-          INSERT INTO ranges (id, product_id, name, base_price, sort_order)
-          VALUES (?, ?, ?, ?, ?)
-        `).run(r.id || generateId('range'), id, r.name.trim(), r.base_price, i);
+          INSERT INTO ranges (id, product_id, name, base_price, dimensions, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(r.id || generateId('range'), id, r.name.trim(), r.base_price, r.dimensions?.trim() || '', i);
       }
     }
 

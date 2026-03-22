@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Fournisseurs — Configurateur V3</title>
+  <link rel="stylesheet" href="../../assets/styles/main.css">
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ==================== SIDEBAR ==================== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <a href="../menu/index.html" class="back-link">← Accueil</a>
+      <h2>🏭 Fournisseurs</h2>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-title">Répertoire</div>
+      <div class="sidebar-item active" data-view="list">
+        <span class="icon">📋</span> Liste fournisseurs
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ==================== CONTENU PRINCIPAL ==================== -->
+  <div class="main-content">
+
+    <header class="page-header">
+      <h1 id="page-title">Fournisseurs</h1>
+      <div class="header-actions">
+        <div class="search-wrapper">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" class="search-input"
+            placeholder="Nom, contact, commercial..." autocomplete="off">
+        </div>
+        <button class="btn btn-primary" id="btn-new-supplier">+ Nouveau fournisseur</button>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div id="toast-container"></div>
+
+      <!-- ======= VUE LISTE ======= -->
+      <div id="view-list" class="view">
+
+        <!-- Stats -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-total">—</div>
+            <div class="stat-label">Total fournisseurs</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-with-commercial">—</div>
+            <div class="stat-label">Avec commercial</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-with-sav">—</div>
+            <div class="stat-label">Avec contact SAV</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-with-contact">—</div>
+            <div class="stat-label">Avec contact régulier</div>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Fournisseurs
+              <span id="supplier-count" class="badge badge-gray" style="margin-left:8px">0</span>
+            </span>
+          </div>
+
+          <div id="empty-state" class="empty-state" style="display:none">
+            <div class="empty-icon">🏭</div>
+            <h3>Aucun fournisseur</h3>
+            <p>Commencez par créer votre premier fournisseur.</p>
+            <button class="btn btn-primary" id="btn-empty-new-supplier">+ Créer un fournisseur</button>
+          </div>
+
+          <div class="table-wrapper" id="table-wrapper">
+            <table id="suppliers-table">
+              <thead>
+                <tr>
+                  <th>Fournisseur</th>
+                  <th>Contact régulier</th>
+                  <th>Commercial</th>
+                  <th>SAV</th>
+                  <th>Téléphone</th>
+                  <th style="text-align:right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="suppliers-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ==================== MODAL ÉDITION ==================== -->
+<div id="modal-supplier" class="modal-backdrop">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2 id="modal-supplier-title">Nouveau fournisseur</h2>
+      <button class="modal-close" data-close-modal="modal-supplier">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div id="modal-error" class="alert alert-error" style="display:none;margin-bottom:16px"></div>
+
+      <!-- Infos générales -->
+      <div class="form-section-title" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-gray-500);margin-bottom:10px">
+        Informations générales
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label required" for="f-name">Nom du fournisseur</label>
+          <input type="text" id="f-name" class="form-control" placeholder="ex: Natuzzi, Rolf Benz…" autocomplete="off">
+          <div class="form-error" id="err-name">Nom obligatoire</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-phone">Téléphone principal</label>
+          <input type="text" id="f-phone" class="form-control" placeholder="ex: 04 72 00 00 00" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="f-email">Email principal</label>
+          <input type="email" id="f-email" class="form-control" placeholder="ex: contact@fournisseur.fr" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="f-address">Adresse</label>
+        <input type="text" id="f-address" class="form-control" placeholder="ex: 12 rue de l'Industrie" autocomplete="off">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex:0 0 120px">
+          <label class="form-label" for="f-zip">Code postal</label>
+          <input type="text" id="f-zip" class="form-control" placeholder="69000" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-city">Ville</label>
+          <input type="text" id="f-city" class="form-control" placeholder="Lyon" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- Contact régulier -->
+      <div class="form-section-title" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-gray-500);margin:18px 0 10px">
+        Contact régulier
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="f-contact">Nom du contact</label>
+          <input type="text" id="f-contact" class="form-control" placeholder="ex: Marie Martin" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-contact-phone">Téléphone</label>
+          <input type="text" id="f-contact-phone" class="form-control" placeholder="ex: 06 12 34 56 78" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-contact-email">Email</label>
+          <input type="email" id="f-contact-email" class="form-control" placeholder="marie@fournisseur.fr" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- Commercial -->
+      <div class="form-section-title" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-gray-500);margin:18px 0 10px">
+        Commercial (représentant qui nous visite)
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="f-commercial-name">Nom du commercial</label>
+          <input type="text" id="f-commercial-name" class="form-control" placeholder="ex: Pierre Dubois" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-commercial-phone">Téléphone</label>
+          <input type="text" id="f-commercial-phone" class="form-control" placeholder="ex: 06 98 76 54 32" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-commercial-email">Email</label>
+          <input type="email" id="f-commercial-email" class="form-control" placeholder="pierre@fournisseur.fr" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- SAV -->
+      <div class="form-section-title" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-gray-500);margin:18px 0 10px">
+        Contact SAV
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="f-sav-name">Nom du contact SAV</label>
+          <input type="text" id="f-sav-name" class="form-control" placeholder="ex: Sophie Bernard" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-sav-phone">Téléphone</label>
+          <input type="text" id="f-sav-phone" class="form-control" placeholder="ex: 04 72 00 00 01" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-sav-email">Email</label>
+          <input type="email" id="f-sav-email" class="form-control" placeholder="sav@fournisseur.fr" autocomplete="off">
+        </div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close-modal="modal-supplier">Annuler</button>
+      <button class="btn btn-primary" id="btn-save-supplier">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ==================== MODAL FICHE FOURNISSEUR ==================== -->
+<div id="modal-view" class="modal-backdrop">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header">
+      <h2 id="view-supplier-name">Fiche fournisseur</h2>
+      <button class="modal-close" data-close-modal="modal-view">✕</button>
+    </div>
+    <div class="modal-body" id="view-supplier-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close-modal="modal-view">Fermer</button>
+      <button class="btn btn-primary" id="btn-view-edit">Modifier</button>
+    </div>
+  </div>
+</div>
+
+
+<script src="../../shared/utils.js"></script>
+<script src="./fournisseurs.js"></script>
+</body>
+</html>

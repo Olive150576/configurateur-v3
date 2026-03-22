@@ -37,19 +37,23 @@ async function loadView(view) {
 
 // ==================== MON ENTREPRISE ====================
 
-const COMPANY_KEYS = ['company_name','company_address','company_city','company_zip',
-                      'company_phone','company_email','company_siret','company_vat','vat_rate'];
+const COMPANY_KEYS = ['company_name','company_trade_name','company_address','company_city','company_zip',
+                      'company_phone','company_email','company_siret','company_ape','company_capital',
+                      'company_vat','vat_rate'];
 
 const COMPANY_FIELDS = {
-  company_name:    'c-name',
-  company_address: 'c-address',
-  company_city:    'c-city',
-  company_zip:     'c-zip',
-  company_phone:   'c-phone',
-  company_email:   'c-email',
-  company_siret:   'c-siret',
-  company_vat:     'c-vat',
-  vat_rate:        'c-vat-rate',
+  company_name:       'c-name',
+  company_trade_name: 'c-trade-name',
+  company_address:    'c-address',
+  company_city:       'c-city',
+  company_zip:        'c-zip',
+  company_phone:      'c-phone',
+  company_email:      'c-email',
+  company_siret:      'c-siret',
+  company_ape:        'c-ape',
+  company_capital:    'c-capital',
+  company_vat:        'c-vat',
+  vat_rate:           'c-vat-rate',
 };
 
 async function loadCompanySettings() {
