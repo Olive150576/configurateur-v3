@@ -576,13 +576,13 @@ function recalcConfigTotal() {
     if (qty > 0) optionsTotal += o.price * qty;
   });
 
-  const coeff   = state.cfg.product.purchase_coefficient ?? 2.0;
-  const mode    = state.cfg.product.price_rounding ?? 'none';
-  const pvHTRaw = round2((base + modulesTotal + optionsTotal) * coeff);
-  const pvHT    = applyRounding(pvHTRaw, mode);
-  const vatAmt  = round2(pvHT * state.vatRate / 100);
-  const pvTTC   = round2(pvHT + vatAmt);
-  const qty     = Math.max(1, parseInt(document.getElementById('config-qty').value) || 1);
+  const coeff  = state.cfg.product.purchase_coefficient ?? 2.0;
+  const mode   = state.cfg.product.price_rounding ?? 'none';
+  // PA × coeff = TTC (arrondi selon le mode choisi)
+  const pvTTC  = applyRounding(round2((base + modulesTotal + optionsTotal) * coeff), mode);
+  const pvHT   = round2(pvTTC / (1 + state.vatRate / 100));
+  const vatAmt = round2(pvTTC - pvHT);
+  const qty    = Math.max(1, parseInt(document.getElementById('config-qty').value) || 1);
   const lineHT  = round2(pvHT * qty);
   const lineTTC = round2(pvTTC * qty);
 
@@ -628,10 +628,12 @@ function handleAddConfig() {
       return { id: o.id, name: o.name, description: o.description || '', qty: oQty, price: pvPrc, total: round2(pvPrc * oQty) };
     });
 
-  const modulesTotal = selectedModules.reduce((s, m) => s + m.total, 0);
-  const optionsTotal = selectedOptions.reduce((s, o) => s + o.total, 0);
-  const unitPrice    = applyRounding(round2(base * coeff) + modulesTotal + optionsTotal, mode);
-  const lineTotal    = round2(unitPrice * qty);
+  const modulesTotal   = selectedModules.reduce((s, m) => s + m.total, 0);
+  const optionsTotal   = selectedOptions.reduce((s, o) => s + o.total, 0);
+  // PA × coeff = TTC (arrondi), puis HT = TTC / (1 + TVA%)
+  const unitPriceTTC   = applyRounding(round2(base * coeff) + modulesTotal + optionsTotal, mode);
+  const unitPrice      = round2(unitPriceTTC / (1 + state.vatRate / 100));
+  const lineTotal      = round2(unitPrice * qty);
 
   // Description textuelle
   const descParts = [
