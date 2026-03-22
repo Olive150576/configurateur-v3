@@ -331,4 +331,59 @@ function search(term) {
   return products.map(p => enrichProduct(p));
 }
 
-module.exports = { getAll, getById, create, update, archive, restore, setActive, duplicate, search };
+/**
+ * Mise à jour des prix en masse pour un fournisseur/collection
+ * @param {string|null} supplierId  — null = tous fournisseurs
+ * @param {string}      collection  — chaîne de filtre (vide = toutes)
+ * @param {number}      percent     — ex: 5 pour +5%, -3 pour -3%
+ */
+function bulkUpdatePrices(supplierId, collection, percent) {
+  const db = getDb();
+  const factor = 1 + (parseFloat(percent) / 100);
+  if (isNaN(factor) || factor <= 0) throw new Error('Pourcentage invalide');
+
+  let query = 'SELECT id FROM products WHERE archived = 0';
+  const params = [];
+  if (supplierId) { query += ' AND supplier_id = ?'; params.push(supplierId); }
+  if (collection && collection.trim()) {
+    query += ' AND collection LIKE ?';
+    params.push(`%${collection.trim()}%`);
+  }
+
+  const products = db.prepare(query).all(...params);
+  if (products.length === 0) return { products: 0, ranges: 0, modules: 0, options: 0 };
+
+  const doUpdate = db.transaction(() => {
+    let rangeCount = 0, moduleCount = 0, optionCount = 0;
+
+    for (const { id } of products) {
+      const r = db.prepare(
+        'UPDATE ranges SET base_price = ROUND(base_price * ?, 2) WHERE product_id = ?'
+      ).run(factor, id);
+      rangeCount += r.changes;
+
+      const modules = db.prepare('SELECT id FROM modules WHERE product_id = ?').all(id);
+      for (const mod of modules) {
+        const mp = db.prepare(
+          'UPDATE module_prices SET price = ROUND(price * ?, 2) WHERE module_id = ?'
+        ).run(factor, mod.id);
+        moduleCount += mp.changes;
+      }
+
+      const op = db.prepare(
+        'UPDATE options SET price = ROUND(price * ?, 2) WHERE product_id = ?'
+      ).run(factor, id);
+      optionCount += op.changes;
+
+      db.prepare("UPDATE products SET updated_at = datetime('now') WHERE id = ?").run(id);
+    }
+
+    return { products: products.length, ranges: rangeCount, modules: moduleCount, options: optionCount };
+  });
+
+  const result = doUpdate();
+  log('product', 'bulk', 'prices-updated', { supplierId, collection, percent, ...result });
+  return result;
+}
+
+module.exports = { getAll, getById, create, update, archive, restore, setActive, duplicate, search, bulkUpdatePrices };

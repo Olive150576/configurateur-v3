@@ -137,4 +137,27 @@ async function openEtiquette(productId, config = {}) {
   return { opened: true };
 }
 
-module.exports = { openDocument, openSupplierDocument, savePDF, saveAndEmail, openEtiquette };
+/**
+ * Ouvre la fenêtre catalogue PDF pour un fournisseur
+ * @param {string|null} supplierId — null = tous les fournisseurs actifs
+ */
+async function openCatalogue(supplierId) {
+  const win = new BrowserWindow({
+    width:  920,
+    height: 1160,
+    minWidth: 700,
+    title: 'Catalogue produits',
+    webPreferences: {
+      preload: path.join(__dirname, '../preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  const htmlPath = path.join(__dirname, '../../renderer/print/catalogue.html');
+  await win.loadFile(htmlPath, { query: { supplierId: supplierId || '' } });
+
+  return { opened: true };
+}
+
+module.exports = { openDocument, openSupplierDocument, savePDF, saveAndEmail, openEtiquette, openCatalogue };

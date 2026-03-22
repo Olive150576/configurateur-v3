@@ -20,7 +20,9 @@
     "electron-rebuild": "^3.2.9"
   },
   "dependencies": {
-    "better-sqlite3": "^12.8.0"
+    "better-sqlite3": "^12.8.0",
+    "electron-updater": "^6.3.9",
+    "qrcode": "^1.5.4"
   },
   "build": {
     "appId": "com.olive.configurateur-v3",
@@ -47,6 +49,11 @@
       "artifactName": "${productName}-${version}-portable.exe"
     },
     "npmRebuild": true,
-    "nodeGypRebuild": false
+    "nodeGypRebuild": false,
+    "publish": {
+      "provider": "github",
+      "owner": "Olive150576",
+      "repo": "configurateur-v3"
+    }
   }
 }

@@ -4,7 +4,7 @@
  * Aucun accès direct à Node.js depuis la UI
  */
 
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, shell } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
 
@@ -20,6 +20,9 @@ contextBridge.exposeInMainWorld('api', {
     duplicate: (id)            => ipcRenderer.invoke('products:duplicate', id),
     search:    (term)          => ipcRenderer.invoke('products:search', term),
     setActive: (id, active)    => ipcRenderer.invoke('products:setActive', id, active),
+    bulkUpdatePrices: (supplierId, collection, pct) =>
+      ipcRenderer.invoke('products:bulkUpdatePrices', supplierId, collection, pct),
+    generateQR: (text) => ipcRenderer.invoke('products:generateQR', text),
   },
 
   // ==================== FOURNISSEURS ====================
@@ -69,10 +72,25 @@ contextBridge.exposeInMainWorld('api', {
     print: (productId, config) => ipcRenderer.invoke('etiquette:print', productId, config),
   },
 
+  // ==================== CATALOGUE ====================
+  catalogue: {
+    print: (supplierId) => ipcRenderer.invoke('catalogue:print', supplierId),
+  },
+
   // ==================== STATISTIQUES ====================
   stats: {
     get:         (period) => ipcRenderer.invoke('stats:get', period),
     getAdvanced: ()       => ipcRenderer.invoke('stats:getAdvanced'),
+  },
+
+  // ==================== MISE À JOUR AUTO ====================
+  update: {
+    check:    ()  => ipcRenderer.invoke('update:check'),
+    download: ()  => ipcRenderer.invoke('update:download'),
+    install:  ()  => ipcRenderer.invoke('update:install'),
+    onAvailable: (cb) => ipcRenderer.on('update:available', (_, info) => cb(info)),
+    onProgress:  (cb) => ipcRenderer.on('update:progress',  (_, info) => cb(info)),
+    onReady:     (cb) => ipcRenderer.on('update:ready',     ()        => cb()),
   },
 
   // ==================== APP ====================

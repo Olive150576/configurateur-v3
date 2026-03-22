@@ -64,7 +64,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       company[k] = (configResults[i]?.ok ? configResults[i].data : '') || '';
     });
 
-    render(product, company);
+    // Génération QR code
+    const qrText = company.company_website
+      ? `${company.company_website.replace(/\/$/, '')}/produits/${product.id}`
+      : [product.name, product.collection, product.supplier_name].filter(Boolean).join(' — ');
+    let qrDataUrl = '';
+    try {
+      const qrRes = await window.api.products.generateQR(qrText);
+      if (qrRes?.ok) qrDataUrl = qrRes.data;
+    } catch (_) { /* QR facultatif */ }
+
+    render(product, company, qrDataUrl);
   } catch (e) {
     showError('Erreur : ' + e.message);
   }
@@ -106,7 +116,7 @@ function getEmoji(text) {
 
 // ── Rendu principal ───────────────────────────────────────────────────────────
 
-function render(product, company) {
+function render(product, company, qrDataUrl = '') {
   // Lignes de description
   const descLines = (product.description || '')
     .split('\n')
@@ -207,10 +217,13 @@ function render(product, company) {
           : ''}
       </div>
       <div class="footer-center">${escHtml(companyName)}</div>
-      <div class="footer-right">
-        ${company.company_phone ? escHtml(company.company_phone) + '<br>' : ''}
-        ${company.company_email ? escHtml(company.company_email) + '<br>' : ''}
-        ${company.company_website ? escHtml(company.company_website) : ''}
+      <div class="footer-right" style="display:flex;align-items:center;gap:10px;justify-content:flex-end">
+        <div style="text-align:right">
+          ${company.company_phone ? escHtml(company.company_phone) + '<br>' : ''}
+          ${company.company_email ? escHtml(company.company_email) + '<br>' : ''}
+          ${company.company_website ? escHtml(company.company_website) : ''}
+        </div>
+        ${qrDataUrl ? `<img src="${qrDataUrl}" class="footer-qr" alt="QR">` : ''}
       </div>
     </div>
   `;

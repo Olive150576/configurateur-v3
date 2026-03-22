@@ -90,5 +90,32 @@ async function checkAutoBackupNotif() {
   } catch { /* silencieux */ }
 }
 
+function setupAutoUpdater() {
+  if (!window.api?.update) return;
+
+  const banner = document.getElementById('update-banner');
+
+  window.api.update.onAvailable((info) => {
+    banner.textContent = `⬇ Mise à jour v${info.version} disponible`;
+    banner.style.display = 'block';
+    banner.onclick = () => {
+      banner.textContent = 'Téléchargement…';
+      banner.onclick = null;
+      window.api.update.download();
+    };
+  });
+
+  window.api.update.onProgress((info) => {
+    banner.textContent = `⬇ Téléchargement ${info.percent}%…`;
+  });
+
+  window.api.update.onReady(() => {
+    banner.textContent = '✓ Prêt — Cliquez pour installer et redémarrer';
+    banner.style.background = 'rgba(34,197,94,0.9)';
+    banner.onclick = () => window.api.update.install();
+  });
+}
+
 loadDashboard();
 checkAutoBackupNotif();
+setupAutoUpdater();

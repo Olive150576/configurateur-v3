@@ -27,6 +27,12 @@
         <span class="icon">🗄</span> Archivés
       </div>
       <div class="sidebar-section-title">Outils</div>
+      <div class="sidebar-item" data-view="bulk-update">
+        <span class="icon">📈</span> Mise à jour tarifs
+      </div>
+      <div class="sidebar-item" data-view="catalogue">
+        <span class="icon">📖</span> Catalogue PDF
+      </div>
       <div class="sidebar-item" data-view="import">
         <span class="icon">📥</span> Importer JSON
       </div>
@@ -144,6 +150,99 @@
               </thead>
               <tbody id="archived-tbody"></tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= VUE : CATALOGUE PDF ======= -->
+      <div id="view-catalogue" class="view" style="display:none">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Génération du catalogue PDF</span></div>
+          <div class="card-body">
+            <p class="text-muted text-sm" style="margin-bottom:16px">
+              Génère un catalogue PDF multi-pages avec toutes les fiches produits, leurs gammes et prix TTC.
+              Le design reprend la charte des étiquettes magasin.
+            </p>
+            <div class="form-row" style="align-items:flex-end">
+              <div class="form-group">
+                <label class="form-label">Fournisseur</label>
+                <select id="cat-supplier" class="form-control">
+                  <option value="">— Tous les fournisseurs —</option>
+                </select>
+              </div>
+              <div class="form-group" style="padding-bottom:4px">
+                <button class="btn btn-primary" id="btn-open-catalogue">📖 Générer le catalogue</button>
+              </div>
+            </div>
+            <p class="text-sm text-muted" style="margin-top:8px">
+              Seuls les produits actifs sont inclus. Les prix affichés sont des prix TTC calculés avec le coefficient de vente.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======= VUE : MISE À JOUR TARIFS ======= -->
+      <div id="view-bulk-update" class="view" style="display:none">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Mise à jour des tarifs en masse</span></div>
+          <div class="card-body">
+            <div class="alert" style="background:#fffbeb;border:1px solid #fcd34d;color:#92400e;margin-bottom:16px;font-size:13px;line-height:1.5">
+              <strong>Attention :</strong> cette opération modifie les <strong>prix d'achat HT</strong> de tous les produits sélectionnés
+              (gammes, modules et options). Le coefficient de vente reste inchangé.
+              <br>Un backup automatique est recommandé avant toute modification.
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Fournisseur</label>
+                <select id="bulk-supplier" class="form-control">
+                  <option value="">— Tous les fournisseurs —</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Filtrer par collection <span style="font-weight:400;color:#aaa">(optionnel)</span></label>
+                <input type="text" id="bulk-collection" class="form-control" placeholder="ex: Premium 2026" autocomplete="off">
+              </div>
+            </div>
+
+            <div class="form-row" style="align-items:flex-end">
+              <div class="form-group" style="flex:0 0 200px">
+                <label class="form-label">Variation de prix</label>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input type="number" id="bulk-percent" class="form-control"
+                    value="5" step="0.1" min="-99" max="200"
+                    style="width:120px">
+                  <span style="font-weight:600;font-size:15px">%</span>
+                </div>
+                <p class="text-sm text-muted" style="margin-top:4px">Positif = hausse · Négatif = baisse</p>
+              </div>
+              <div class="form-group" style="padding-bottom:4px">
+                <button class="btn btn-ghost" id="btn-bulk-preview">🔍 Prévisualiser</button>
+              </div>
+            </div>
+
+            <!-- Prévisualisation -->
+            <div id="bulk-preview" style="display:none;margin-top:8px">
+              <div class="card-header" style="padding:10px 0;border-top:1px solid var(--color-border)">
+                <span class="card-title" id="bulk-preview-title">Produits concernés</span>
+              </div>
+              <div class="table-wrapper" style="max-height:260px;overflow-y:auto">
+                <table id="bulk-preview-table" style="font-size:12px">
+                  <thead><tr>
+                    <th>Produit</th>
+                    <th>Fournisseur</th>
+                    <th>Collection</th>
+                    <th style="text-align:center">Gammes</th>
+                    <th style="text-align:center">Modules</th>
+                  </tr></thead>
+                  <tbody id="bulk-preview-tbody"></tbody>
+                </table>
+              </div>
+              <div style="margin-top:12px;display:flex;gap:10px;align-items:center">
+                <button class="btn btn-primary" id="btn-bulk-apply">Appliquer la modification</button>
+                <span id="bulk-result-msg" style="font-size:13px;color:var(--color-success)"></span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

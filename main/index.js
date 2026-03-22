@@ -5,6 +5,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { initDatabase } = require('./db/database');
+const { autoUpdater } = require('electron-updater');
 
 // Fonction wrap globale pour les handlers IPC
 require('./ipc/wrap');
@@ -68,7 +69,40 @@ app.whenReady().then(async () => {
   BackupScheduler.start();
 
   createWindow();
+
+  // Vérification des mises à jour (30s après démarrage pour ne pas bloquer le démarrage)
+  setTimeout(() => checkForUpdates(), 30000);
 });
+
+// ── Auto-updater ──────────────────────────────────────────────────────────────
+
+autoUpdater.autoDownload = false;
+autoUpdater.logger = require('./utils/logger').log.bind(null, 'updater', 'auto', 'info');
+
+function checkForUpdates() {
+  // Ne vérifie que dans l'app packagée (pas en mode dev)
+  if (!app.isPackaged) return;
+  autoUpdater.checkForUpdates().catch(() => {});
+}
+
+autoUpdater.on('update-available', (info) => {
+  const win = BrowserWindow.getAllWindows()[0];
+  if (win) win.webContents.send('update:available', { version: info.version });
+});
+
+autoUpdater.on('download-progress', (progress) => {
+  const win = BrowserWindow.getAllWindows()[0];
+  if (win) win.webContents.send('update:progress', { percent: Math.round(progress.percent) });
+});
+
+autoUpdater.on('update-downloaded', () => {
+  const win = BrowserWindow.getAllWindows()[0];
+  if (win) win.webContents.send('update:ready');
+});
+
+ipcMain.handle('update:check',    () => wrap(() => { checkForUpdates(); return { checking: true }; }));
+ipcMain.handle('update:download', () => wrap(() => { autoUpdater.downloadUpdate(); return { downloading: true }; }));
+ipcMain.handle('update:install',  () => { autoUpdater.quitAndInstall(); });
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

@@ -30,6 +30,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupSubModals();
   setupImportExport();
   setupPhotoUpload();
+  setupBulkUpdate();
+  setupCatalogue();
   await loadProducts();
   await loadSuppliers();
 });
@@ -222,11 +224,13 @@ function switchView(view) {
   state.currentView = view;
 
   const titles = {
-    list:         'Catalogue produits',
-    archived:     'Produits archivés',
-    import:       'Importer un catalogue',
-    'import-csv': 'Importer CSV fournisseur',
-    export:       'Exporter le catalogue',
+    list:           'Catalogue produits',
+    archived:       'Produits archivés',
+    'bulk-update':  'Mise à jour des tarifs',
+    catalogue:      'Catalogue PDF',
+    import:         'Importer un catalogue',
+    'import-csv':   'Importer CSV fournisseur',
+    export:         'Exporter le catalogue',
   };
   document.getElementById('page-title').textContent = titles[view] || 'Produits';
 
@@ -285,12 +289,27 @@ async function loadArchivedProducts() {
 async function loadSuppliers() {
   const res = await window.api.suppliers.getAll();
   if (!res.ok) return;
+
   const datalist = document.getElementById('suppliers-list');
   datalist.innerHTML = '';
+
+  const bulkSelect = document.getElementById('bulk-supplier');
+  bulkSelect.innerHTML = '<option value="">— Tous les fournisseurs —</option>';
+
   res.data.forEach(s => {
     const opt = document.createElement('option');
     opt.value = s.name;
     datalist.appendChild(opt);
+
+    const bopt = document.createElement('option');
+    bopt.value = s.id;
+    bopt.textContent = s.name;
+    bulkSelect.appendChild(bopt);
+
+    const copt = document.createElement('option');
+    copt.value = s.id;
+    copt.textContent = s.name;
+    document.getElementById('cat-supplier').appendChild(copt);
   });
 }
 
@@ -1225,4 +1244,96 @@ function clearFieldError(inputId, errId) {
 function hideAllErrors() {
   document.querySelectorAll('.form-error').forEach(el => el.style.display = 'none');
   document.querySelectorAll('.form-control.error').forEach(el => el.classList.remove('error'));
+}
+
+// ==================== CATALOGUE PDF ====================
+
+function setupCatalogue() {
+  document.getElementById('btn-open-catalogue').addEventListener('click', async () => {
+    const supplierId = document.getElementById('cat-supplier').value || null;
+    const btn = document.getElementById('btn-open-catalogue');
+    btn.disabled = true;
+    const res = await window.api.catalogue.print(supplierId);
+    btn.disabled = false;
+    if (!res.ok) Utils.toast('Erreur : ' + res.error, 'error');
+  });
+}
+
+// ==================== MISE À JOUR TARIFS EN MASSE ====================
+
+function setupBulkUpdate() {
+  document.getElementById('btn-bulk-preview').addEventListener('click', previewBulkUpdate);
+  document.getElementById('btn-bulk-apply').addEventListener('click', applyBulkUpdate);
+}
+
+async function previewBulkUpdate() {
+  const supplierId  = document.getElementById('bulk-supplier').value || null;
+  const collection  = document.getElementById('bulk-collection').value.trim();
+  const pct         = parseFloat(document.getElementById('bulk-percent').value);
+
+  if (isNaN(pct)) { Utils.toast('Entrez un pourcentage valide', 'error'); return; }
+
+  // Filtrer en local sur les produits déjà chargés
+  let filtered = state.products.filter(p => !p.archived);
+  if (supplierId) filtered = filtered.filter(p => p.supplier_id === supplierId);
+  if (collection) filtered = filtered.filter(p =>
+    (p.collection || '').toLowerCase().includes(collection.toLowerCase())
+  );
+
+  const previewDiv = document.getElementById('bulk-preview');
+  const tbody      = document.getElementById('bulk-preview-tbody');
+  const title      = document.getElementById('bulk-preview-title');
+  const resultMsg  = document.getElementById('bulk-result-msg');
+
+  resultMsg.textContent = '';
+  title.textContent = `${filtered.length} produit${filtered.length !== 1 ? 's' : ''} concerné${filtered.length !== 1 ? 's' : ''}`;
+
+  tbody.innerHTML = filtered.length === 0
+    ? `<tr><td colspan="5" style="text-align:center;color:#aaa;padding:16px">Aucun produit correspondant</td></tr>`
+    : filtered.map(p => `
+        <tr>
+          <td>${Utils.escHtml(p.name)}</td>
+          <td>${Utils.escHtml(p.supplier_name || '—')}</td>
+          <td>${Utils.escHtml(p.collection || '—')}</td>
+          <td style="text-align:center">${p.ranges?.length ?? 0}</td>
+          <td style="text-align:center">${p.modules?.length ?? 0}</td>
+        </tr>`).join('');
+
+  document.getElementById('btn-bulk-apply').disabled = filtered.length === 0;
+  previewDiv.style.display = 'block';
+}
+
+async function applyBulkUpdate() {
+  const supplierId = document.getElementById('bulk-supplier').value || null;
+  const collection = document.getElementById('bulk-collection').value.trim();
+  const pct        = parseFloat(document.getElementById('bulk-percent').value);
+
+  if (isNaN(pct)) return;
+
+  const sign = pct >= 0 ? '+' : '';
+  const ok = confirm(
+    `Appliquer une variation de ${sign}${pct}% sur tous les prix sélectionnés ?\n\nCette action est irréversible sans backup.`
+  );
+  if (!ok) return;
+
+  const btn = document.getElementById('btn-bulk-apply');
+  btn.disabled = true;
+  btn.textContent = 'Application…';
+
+  const res = await window.api.products.bulkUpdatePrices(supplierId, collection, pct);
+
+  btn.disabled = false;
+  btn.textContent = 'Appliquer la modification';
+
+  if (!res.ok) {
+    Utils.toast('Erreur : ' + res.error, 'error');
+    return;
+  }
+
+  const d = res.data;
+  document.getElementById('bulk-result-msg').textContent =
+    `✓ ${d.products} produit(s) mis à jour — ${d.ranges} gammes, ${d.modules} modules, ${d.options} options`;
+
+  Utils.toast(`Tarifs mis à jour : ${sign}${pct}% sur ${d.products} produit(s)`, 'success');
+  await loadProducts(); // Recharge la liste pour refléter les changements
 }

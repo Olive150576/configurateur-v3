@@ -32,6 +32,11 @@ function register(ipcMain) {
   ipcMain.handle('etiquette:print', (_, productId, config) =>
     wrap(() => PrintService.openEtiquette(productId, config || {}))
   );
+
+  // Catalogue PDF fournisseur
+  ipcMain.handle('catalogue:print', (_, supplierId) =>
+    wrap(() => PrintService.openCatalogue(supplierId || null))
+  );
 }
 
 module.exports = { register };
