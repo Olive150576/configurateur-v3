@@ -226,10 +226,102 @@ function titleWithEmojis(title) {
   }).join(' + ');
 }
 
+// ── Schémas SVG ───────────────────────────────────────────────────────────────
+
+/** Largeurs d'assise par nombre de places */
+const SOFA_SEAT_W = { '1': 55, '1.5': 72, '2': 90, '2.5': 110, '3': 135, '3.5': 155, '4': 175 };
+
+function svgSofa(places, hasRelax) {
+  const sw = SOFA_SEAT_W[String(places)] || 110;
+  const vw = sw + 20;
+  const cx = Math.round(vw / 2);
+  const label = places === '1' ? '1P' : `${places}P`;
+  const relaxRow = hasRelax
+    ? `<text x="${cx}" y="50" font-family="sans-serif" font-size="9" fill="white" text-anchor="middle">⚡</text>`
+    : '';
+  return `<svg viewBox="0 0 ${vw} 70" xmlns="http://www.w3.org/2000/svg">
+    <rect x="10" y="8" width="${sw}" height="50" rx="3" fill="#c8a96e" opacity="0.82"/>
+    <rect x="10" y="8" width="${sw}" height="13" rx="3" fill="#1C1410" opacity="0.65"/>
+    <rect x="4"  y="8" width="10"  height="50" rx="2" fill="#1C1410" opacity="0.45"/>
+    <rect x="${sw}" y="8" width="10" height="50" rx="2" fill="#1C1410" opacity="0.45"/>
+    <text x="${cx}" y="${hasRelax ? 40 : 38}" font-family="sans-serif" font-size="10" fill="white" text-anchor="middle" font-weight="700">${label}</text>
+    ${relaxRow}
+  </svg>`;
+}
+
+function svgMeridienne(hasRelax) {
+  return `<svg viewBox="0 0 120 70" xmlns="http://www.w3.org/2000/svg">
+    <rect x="10" y="8"  width="100" height="36" rx="3" fill="#c8a96e" opacity="0.82"/>
+    <rect x="10" y="8"  width="100" height="11" rx="3" fill="#1C1410" opacity="0.65"/>
+    <rect x="4"  y="8"  width="10"  height="36" rx="2" fill="#1C1410" opacity="0.45"/>
+    <rect x="100" y="8" width="10"  height="54" rx="2" fill="#1C1410" opacity="0.45"/>
+    <rect x="10" y="43" width="50"  height="18" rx="3" fill="#c8a96e" opacity="0.70"/>
+    <rect x="4"  y="43" width="10"  height="18" rx="2" fill="#1C1410" opacity="0.30"/>
+    <text x="55" y="30" font-family="sans-serif" font-size="9" fill="white" text-anchor="middle" font-weight="700">MÉR.</text>
+    ${hasRelax ? `<text x="35" y="56" font-family="sans-serif" font-size="8" fill="white" text-anchor="middle">⚡</text>` : ''}
+  </svg>`;
+}
+
+function svgAngle(hasRelax) {
+  return `<svg viewBox="0 0 120 70" xmlns="http://www.w3.org/2000/svg">
+    <rect x="10" y="8"  width="100" height="30" rx="3" fill="#c8a96e" opacity="0.82"/>
+    <rect x="10" y="8"  width="100" height="10" rx="3" fill="#1C1410" opacity="0.65"/>
+    <rect x="4"  y="8"  width="10"  height="30" rx="2" fill="#1C1410" opacity="0.45"/>
+    <rect x="10" y="37" width="35"  height="25" rx="3" fill="#c8a96e" opacity="0.82"/>
+    <rect x="4"  y="37" width="10"  height="25" rx="2" fill="#1C1410" opacity="0.45"/>
+    <rect x="10" y="57" width="35"  height="5"  rx="2" fill="#1C1410" opacity="0.45"/>
+    <text x="62" y="27" font-family="sans-serif" font-size="9" fill="white" text-anchor="middle" font-weight="700">ANGLE</text>
+    ${hasRelax ? `<text x="27" y="52" font-family="sans-serif" font-size="8" fill="white" text-anchor="middle">⚡</text>` : ''}
+  </svg>`;
+}
+
+function svgPouf() {
+  return `<svg viewBox="0 0 70 70" xmlns="http://www.w3.org/2000/svg">
+    <rect x="10" y="10" width="50" height="50" rx="5" fill="#c8a96e" opacity="0.82"/>
+    <text x="35" y="40" font-family="sans-serif" font-size="9" fill="white" text-anchor="middle" font-weight="700">POUF</text>
+  </svg>`;
+}
+
+function svgGeneric() {
+  return `<svg viewBox="0 0 110 70" xmlns="http://www.w3.org/2000/svg">
+    <rect x="10" y="8" width="90" height="50" rx="3" fill="#c8a96e" opacity="0.60"/>
+    <rect x="10" y="8" width="90" height="13" rx="3" fill="#1C1410" opacity="0.45"/>
+    <rect x="4"  y="8" width="10" height="50" rx="2" fill="#1C1410" opacity="0.35"/>
+    <rect x="90" y="8" width="10" height="50" rx="2" fill="#1C1410" opacity="0.35"/>
+  </svg>`;
+}
+
+/**
+ * Génère un SVG schématique à partir du titre de la tuile.
+ * Compatible tous fournisseurs : détection par regex sur le nom du module.
+ * Le titre est de la forme "3 PLACES + 2 × RELAX" — le 1er segment = module de base.
+ */
+function getModuleSVG(title) {
+  const t = (title || '').toLowerCase();
+  const hasRelax = /relax/.test(t);
+
+  // Formes spéciales
+  if (/méridienne|meridienne|chaise.long/.test(t)) return svgMeridienne(hasRelax);
+  if (/\bpouf\b/.test(t))                          return svgPouf();
+  if (/\bangle\b|corner/.test(t))                  return svgAngle(hasRelax);
+
+  // Nombre de places — accepte "3 places", "3p", "3pl", "2,5 places", "2.5p", etc.
+  const m = t.match(/(\d+(?:[.,]\d+)?)\s*(?:places?|pl\.?|\bp\b)/);
+  if (m) {
+    const places = String(parseFloat(m[1].replace(',', '.')));
+    return svgSofa(places, hasRelax);
+  }
+  if (/fauteuil/.test(t)) return svgSofa('1', hasRelax);
+
+  // Fallback générique
+  return svgGeneric();
+}
+
 function renderTile(tile) {
   const [intPart, decPart] = formatPrice(tile.price);
   return `
     <div class="price-card">
+      <div class="card-schema">${getModuleSVG(tile.title)}</div>
       <div class="card-name">${titleWithEmojis(tile.title)}</div>
       ${tile.dimensions ? `<div class="card-dims">${escHtml(tile.dimensions)}</div>` : ''}
       <hr class="card-sep">

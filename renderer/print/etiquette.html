@@ -162,19 +162,29 @@
     .price-card {
       border: 1px solid #d8d8d8;
       border-top: 3px solid var(--gold);
-      padding: 14px 10px 16px;
+      padding: 0 0 16px;
+      overflow: hidden;
     }
+    .card-schema {
+      background: #f9f6f1;
+      border-bottom: 1px solid #ede8df;
+      display: flex; align-items: center; justify-content: center;
+      height: 72px; padding: 6px;
+      margin-bottom: 10px;
+    }
+    .card-schema svg { max-width: 100%; height: 100%; }
     .card-name {
+      padding: 0 10px;
       font-family: var(--serif);
       font-size: 18px; font-weight: 700;
       letter-spacing: 1px; text-transform: uppercase;
       color: var(--black); margin-bottom: 2px; line-height: 1.2;
     }
-    .card-dims { font-size: 10px; color: #999; margin-bottom: 8px; letter-spacing: 0; }
-    .card-sep { border: none; border-top: 1px dashed #e8e8e8; margin-bottom: 10px; }
+    .card-dims { font-size: 10px; color: #999; margin-bottom: 8px; letter-spacing: 0; padding: 0 10px; }
+    .card-sep { border: none; border-top: 1px dashed #e8e8e8; margin: 0 10px 10px; }
     .price-row {
       display: flex; align-items: flex-start;
-      justify-content: space-between; margin-bottom: 8px;
+      justify-content: space-between; margin-bottom: 8px; padding: 0 10px;
     }
     .price-row:last-child { margin-bottom: 0; }
     .version-label { font-size: 13px; font-weight: 500; color: var(--gray); line-height: 1.3; }
