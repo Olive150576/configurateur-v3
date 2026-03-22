@@ -10,7 +10,8 @@
     "start": "node start.js",
     "dev": "node start.js --dev",
     "rebuild": "electron-rebuild",
-    "dist": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64"
+    "dist": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64",
+    "release": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64 --publish always"
   },
   "keywords": [],
   "devDependencies": {
@@ -39,14 +40,19 @@
       "icon": "build/icon.ico",
       "target": [
         {
-          "target": "portable",
+          "target": "nsis",
           "arch": ["x64"]
         }
-      ],
-      "artifactName": "${productName}-${version}.${ext}"
+      ]
     },
-    "portable": {
-      "artifactName": "${productName}-${version}-portable.exe"
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Configurateur V3",
+      "artifactName": "${productName}-Setup-${version}.exe",
+      "deleteAppDataOnUninstall": false
     },
     "npmRebuild": true,
     "nodeGypRebuild": false,
