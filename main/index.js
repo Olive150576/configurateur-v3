@@ -77,7 +77,7 @@ app.whenReady().then(async () => {
 // ── Auto-updater ──────────────────────────────────────────────────────────────
 
 autoUpdater.autoDownload = false;
-autoUpdater.logger = require('./utils/logger').log.bind(null, 'updater', 'auto', 'info');
+autoUpdater.logger = null;
 
 function checkForUpdates() {
   // Ne vérifie que dans l'app packagée (pas en mode dev)
