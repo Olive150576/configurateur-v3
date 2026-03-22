@@ -351,21 +351,29 @@ function renderRow(idx, name, qty, unitHT, vatRate, isOption = false, colorRef =
 
 function renderTotals(doc, totalHT, vatAmt, totalTTC, vatRate) {
   const discPct    = doc.discount_percent ?? 0;
-  const depPct     = doc.deposit_percent  ?? 0;
-  const depositTTC = depPct > 0 ? r2(totalTTC * depPct / 100) : 0;
-  const balanceTTC = depPct > 0 ? r2(totalTTC - depositTTC)   : 0;
+  const discAmt    = doc.discount_amount  ?? 0;
+  // Label remise : "Remise X%" seulement si le % est un entier rond (mode %), sinon "Remise"
+  const discLabel  = (discPct > 0 && Number.isInteger(discPct)) ? `Remise ${discPct}%` : 'Remise';
+
+  // Acompte : utiliser deposit_amount directement (toujours TTC), sinon recalculer
+  const depositTTC = doc.deposit_amount > 0
+    ? r2(doc.deposit_amount)
+    : (doc.deposit_percent > 0 ? r2(totalTTC * doc.deposit_percent / 100) : 0);
+  const balanceTTC = depositTTC > 0 ? r2(totalTTC - depositTTC) : 0;
+  const depPct     = doc.deposit_percent ?? 0;
+  const depLabel   = (depPct > 0 && Number.isInteger(depPct)) ? `Acompte ${depPct}%` : 'Acompte';
 
   return `
     <div class="total-section">
       <div class="total-ht-rows">
-        ${discPct > 0 ? `
+        ${discAmt > 0 ? `
           <div class="total-ht-row">
             <span>Sous-total HT</span>
             <span>${formatPrice(doc.subtotal || 0)} €</span>
           </div>
           <div class="total-ht-row">
-            <span>Remise ${discPct}%</span>
-            <span>— ${formatPrice(doc.discount_amount || 0)} €</span>
+            <span>${discLabel}</span>
+            <span>— ${formatPrice(discAmt)} €</span>
           </div>
         ` : ''}
         <div class="total-ht-row">
@@ -387,10 +395,10 @@ function renderTotals(doc, totalHT, vatAmt, totalTTC, vatRate) {
         </div>
       </div>
 
-      ${depPct > 0 ? `
+      ${depositTTC > 0 ? `
         <div class="deposit-rows">
           <div class="deposit-row">
-            <span>Acompte ${depPct}%</span>
+            <span>${depLabel}</span>
             <span>${formatPrice(depositTTC)} € TTC</span>
           </div>
           <div class="deposit-row deposit-row-balance">

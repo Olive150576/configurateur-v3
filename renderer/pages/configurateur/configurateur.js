@@ -60,25 +60,29 @@ function setupHeader() {
   document.getElementById('discount-mode-pct').addEventListener('click', () => {
     document.getElementById('discount-mode-pct').classList.add('active');
     document.getElementById('discount-mode-eur').classList.remove('active');
-    document.getElementById('f-discount').value = 0;
+    const inp = document.getElementById('f-discount');
+    inp.max = 100; inp.step = 0.1; inp.value = 0;
     recalcDevisTotals();
   });
   document.getElementById('discount-mode-eur').addEventListener('click', () => {
     document.getElementById('discount-mode-eur').classList.add('active');
     document.getElementById('discount-mode-pct').classList.remove('active');
-    document.getElementById('f-discount').value = 0;
+    const inp = document.getElementById('f-discount');
+    inp.removeAttribute('max'); inp.step = 1; inp.value = 0;
     recalcDevisTotals();
   });
   document.getElementById('deposit-mode-pct').addEventListener('click', () => {
     document.getElementById('deposit-mode-pct').classList.add('active');
     document.getElementById('deposit-mode-eur').classList.remove('active');
-    document.getElementById('f-deposit').value = 30;
+    const inp = document.getElementById('f-deposit');
+    inp.max = 100; inp.step = 1; inp.value = 30;
     recalcDevisTotals();
   });
   document.getElementById('deposit-mode-eur').addEventListener('click', () => {
     document.getElementById('deposit-mode-eur').classList.add('active');
     document.getElementById('deposit-mode-pct').classList.remove('active');
-    document.getElementById('f-deposit').value = 0;
+    const inp = document.getElementById('f-deposit');
+    inp.removeAttribute('max'); inp.step = 1; inp.value = 0;
     recalcDevisTotals();
   });
 
@@ -763,14 +767,15 @@ function recalcDevisTotals() {
   const totalTTC    = round2(totalHT + vatAmt);
   const depInput    = parseFloat(document.getElementById('f-deposit').value) || 0;
   const depInEur    = document.getElementById('deposit-mode-eur').classList.contains('active');
+  // L'acompte est calculé sur le TTC
   const depositAmt  = depInEur
-    ? round2(Math.min(Math.max(depInput, 0), totalHT))
-    : round2(totalHT * clamp(depInput, 0, 100) / 100);
-  const depositPct  = totalHT > 0 ? round2(depositAmt / totalHT * 100) : 0;
-  const balance     = round2(totalHT - depositAmt);
+    ? round2(Math.min(Math.max(depInput, 0), totalTTC))
+    : round2(totalTTC * clamp(depInput, 0, 100) / 100);
+  const depositPct  = totalTTC > 0 ? round2(depositAmt / totalTTC * 100) : 0;
+  const balance     = round2(totalTTC - depositAmt);
 
   state.totals = { subtotal, discountPct: discPct, discountAmt: discAmt,
-                   total: totalHT, depositPct, depositAmt, balance };
+                   total: totalHT, totalTTC, depositPct, depositAmt, balance };
 
   document.getElementById('dt-subtotal').textContent  = Utils.formatPrice(subtotal);
   document.getElementById('dt-discount').textContent  = `— ${Utils.formatPrice(discAmt)}`;
@@ -778,8 +783,8 @@ function recalcDevisTotals() {
   document.getElementById('dt-vat-label').textContent = `TVA ${state.vatRate}%`;
   document.getElementById('dt-vat').textContent       = Utils.formatPrice(vatAmt);
   document.getElementById('dt-ttc').textContent       = Utils.formatPrice(totalTTC);
-  document.getElementById('dt-deposit').textContent   = Utils.formatPrice(depositAmt);
-  document.getElementById('dt-balance').textContent   = Utils.formatPrice(balance);
+  document.getElementById('dt-deposit').textContent   = Utils.formatPrice(depositAmt) + ' TTC';
+  document.getElementById('dt-balance').textContent   = Utils.formatPrice(balance) + ' TTC';
 }
 
 // ==================== SAUVEGARDE ====================
