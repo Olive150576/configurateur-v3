@@ -232,11 +232,31 @@
       gap: 6px;
     }
     .totals-input-row input {
-      width: 52px;
+      width: 62px;
       height: 22px;
       padding: 2px 5px;
       font-size: 12px;
       text-align: right;
+    }
+    .mode-toggle {
+      display: flex;
+      border: 1px solid var(--color-gray-300);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .mode-btn {
+      padding: 1px 6px;
+      font-size: 11px;
+      font-weight: 600;
+      border: none;
+      background: white;
+      color: var(--color-gray-500);
+      cursor: pointer;
+      line-height: 20px;
+    }
+    .mode-btn.active {
+      background: var(--color-primary, #1e3a5f);
+      color: white;
     }
 
     /* Configure modal */
@@ -435,8 +455,11 @@
             <div class="totals-input-row">
               Remise
               <input type="number" id="f-discount" class="form-control"
-                value="0" min="0" max="100" step="0.1">
-              <span style="font-size:12px;color:var(--color-gray-500)">%</span>
+                value="0" min="0" step="0.1">
+              <div class="mode-toggle">
+                <button class="mode-btn active" id="discount-mode-pct">%</button>
+                <button class="mode-btn" id="discount-mode-eur">€</button>
+              </div>
             </div>
           </div>
           <div class="value" id="dt-discount" style="color:var(--color-danger)">— 0,00 €</div>
@@ -454,8 +477,11 @@
             <div class="totals-input-row">
               Acompte
               <input type="number" id="f-deposit" class="form-control"
-                value="30" min="0" max="100" step="1">
-              <span style="font-size:12px;color:var(--color-gray-500)">%</span>
+                value="30" min="0" step="1">
+              <div class="mode-toggle">
+                <button class="mode-btn active" id="deposit-mode-pct">%</button>
+                <button class="mode-btn" id="deposit-mode-eur">€</button>
+              </div>
             </div>
           </div>
           <div class="value" id="dt-deposit">0,00 €</div>

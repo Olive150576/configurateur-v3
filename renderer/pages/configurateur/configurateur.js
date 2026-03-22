@@ -56,6 +56,32 @@ function setupHeader() {
   document.getElementById('f-deposit')
     .addEventListener('input', recalcDevisTotals);
 
+  // Mode toggles %/€ pour remise et acompte
+  document.getElementById('discount-mode-pct').addEventListener('click', () => {
+    document.getElementById('discount-mode-pct').classList.add('active');
+    document.getElementById('discount-mode-eur').classList.remove('active');
+    document.getElementById('f-discount').value = 0;
+    recalcDevisTotals();
+  });
+  document.getElementById('discount-mode-eur').addEventListener('click', () => {
+    document.getElementById('discount-mode-eur').classList.add('active');
+    document.getElementById('discount-mode-pct').classList.remove('active');
+    document.getElementById('f-discount').value = 0;
+    recalcDevisTotals();
+  });
+  document.getElementById('deposit-mode-pct').addEventListener('click', () => {
+    document.getElementById('deposit-mode-pct').classList.add('active');
+    document.getElementById('deposit-mode-eur').classList.remove('active');
+    document.getElementById('f-deposit').value = 30;
+    recalcDevisTotals();
+  });
+  document.getElementById('deposit-mode-eur').addEventListener('click', () => {
+    document.getElementById('deposit-mode-eur').classList.add('active');
+    document.getElementById('deposit-mode-pct').classList.remove('active');
+    document.getElementById('f-deposit').value = 0;
+    recalcDevisTotals();
+  });
+
   // Livraison
   document.getElementById('f-delivery-enabled').addEventListener('change', e => {
     state.delivery.enabled = e.target.checked;
@@ -726,14 +752,22 @@ function removeLine(idx) {
 function recalcDevisTotals() {
   const deliveryAmt = state.delivery.enabled ? state.delivery.amount : 0;
   const subtotal    = state.devisLines.reduce((s, l) => s + l.total, 0) + deliveryAmt;
-  const discPct    = clamp(parseFloat(document.getElementById('f-discount').value) || 0, 0, 100);
-  const discAmt    = round2(subtotal * discPct / 100);
-  const totalHT    = round2(subtotal - discAmt);
-  const vatAmt     = round2(totalHT * state.vatRate / 100);
-  const totalTTC   = round2(totalHT + vatAmt);
-  const depositPct = clamp(parseFloat(document.getElementById('f-deposit').value) || 0, 0, 100);
-  const depositAmt = round2(totalHT * depositPct / 100);
-  const balance    = round2(totalHT - depositAmt);
+  const discInput   = parseFloat(document.getElementById('f-discount').value) || 0;
+  const discInEur   = document.getElementById('discount-mode-eur').classList.contains('active');
+  const discAmt     = discInEur
+    ? round2(Math.min(Math.max(discInput, 0), subtotal))
+    : round2(subtotal * clamp(discInput, 0, 100) / 100);
+  const discPct     = subtotal > 0 ? round2(discAmt / subtotal * 100) : 0;
+  const totalHT     = round2(subtotal - discAmt);
+  const vatAmt      = round2(totalHT * state.vatRate / 100);
+  const totalTTC    = round2(totalHT + vatAmt);
+  const depInput    = parseFloat(document.getElementById('f-deposit').value) || 0;
+  const depInEur    = document.getElementById('deposit-mode-eur').classList.contains('active');
+  const depositAmt  = depInEur
+    ? round2(Math.min(Math.max(depInput, 0), totalHT))
+    : round2(totalHT * clamp(depInput, 0, 100) / 100);
+  const depositPct  = totalHT > 0 ? round2(depositAmt / totalHT * 100) : 0;
+  const balance     = round2(totalHT - depositAmt);
 
   state.totals = { subtotal, discountPct: discPct, discountAmt: discAmt,
                    total: totalHT, depositPct, depositAmt, balance };

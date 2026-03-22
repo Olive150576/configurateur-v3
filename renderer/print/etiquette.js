@@ -93,6 +93,17 @@ function escHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
+/** Retourne un emoji selon le contenu du texte (option ou ligne de description) */
+function getEmoji(text) {
+  const t = (text || '').toLowerCase();
+  if (/relax/.test(t))                                    return '⚡';
+  if (/batter/.test(t))                                   return '🔋';
+  if (/coutur|broderi|surpiq/.test(t))                    return '🎨';
+  if (/pays|fabrication|fabriqué|made in|origine/.test(t)) return '🌍';
+  if (/mémoire|memoire|memory/.test(t))                   return '🧠';
+  return '';
+}
+
 // ── Rendu principal ───────────────────────────────────────────────────────────
 
 function render(product, company) {
@@ -172,7 +183,10 @@ function render(product, company) {
         <div class="descriptif">
           <div class="section-title">Description</div>
           ${descLines.length
-            ? `<ul class="desc-list">${descLines.map(l => `<li>${escHtml(l)}</li>`).join('')}</ul>`
+            ? `<ul class="desc-list">${descLines.map(l => {
+                const emoji = getEmoji(l);
+                return `<li data-emoji="${emoji ? '1' : '0'}">${emoji ? `<span class="desc-emoji">${emoji}</span>` : ''}<span>${escHtml(l)}</span></li>`;
+              }).join('')}</ul>`
             : `<p style="font-size:11px;color:#aaa">—</p>`}
         </div>
         <div class="options">
@@ -204,11 +218,19 @@ function render(product, company) {
 
 // ── Tuile de configuration ────────────────────────────────────────────────────
 
+/** Insère les emojis dans le titre d'une tuile segment par segment (séparés par " + ") */
+function titleWithEmojis(title) {
+  return title.split(' + ').map(part => {
+    const emoji = getEmoji(part);
+    return emoji ? `${emoji} ${escHtml(part)}` : escHtml(part);
+  }).join(' + ');
+}
+
 function renderTile(tile) {
   const [intPart, decPart] = formatPrice(tile.price);
   return `
     <div class="price-card">
-      <div class="card-name">${escHtml(tile.title)}</div>
+      <div class="card-name">${titleWithEmojis(tile.title)}</div>
       ${tile.dimensions ? `<div class="card-dims">${escHtml(tile.dimensions)}</div>` : ''}
       <hr class="card-sep">
       <div class="price-row">
@@ -226,9 +248,10 @@ function renderTile(tile) {
 // ── Option (section bas de l'étiquette — informatif) ─────────────────────────
 
 function renderOption(opt) {
+  const emoji = getEmoji(opt.name) || getEmoji(opt.description || '');
   return `
     <div class="option-item">
-      <div class="option-name">${escHtml(opt.name)}</div>
+      <div class="option-name">${emoji ? `<span class="opt-emoji">${emoji}</span> ` : ''}${escHtml(opt.name)}</div>
       ${opt.description ? `<div class="option-desc">${escHtml(opt.description)}</div>` : ''}
     </div>`;
 }

@@ -322,7 +322,10 @@ function renderGroupHeader(designation, qty, totalTTC, isFirst = false) {
 function renderRow(idx, name, qty, unitHT, vatRate, isOption = false, colorRef = '', modDescription = '', productDescription = '') {
   const num     = String(idx + 1).padStart(2, '0');
   const lineTTC = r2(unitHT * qty * (1 + vatRate / 100));
-  const label   = isOption ? `+ ${name}` : name;
+  const emoji   = getEmoji(name) || getEmoji(modDescription);
+  const label   = isOption
+    ? `${emoji ? emoji + ' ' : ''}+ ${name}`
+    : `${emoji ? emoji + ' ' : ''}${name}`;
 
   return `
     <tr>
@@ -448,6 +451,16 @@ function renderFooter(company, docType) {
 // ==================== HELPERS ====================
 
 function r2(n) { return Math.round(n * 100) / 100; }
+
+function getEmoji(text) {
+  const t = (text || '').toLowerCase();
+  if (/relax/.test(t))                                     return '⚡';
+  if (/batter/.test(t))                                    return '🔋';
+  if (/coutur|broderi|surpiq/.test(t))                     return '🎨';
+  if (/pays|fabrication|fabriqué|made in|origine/.test(t)) return '🌍';
+  if (/mémoire|memoire|memory/.test(t))                    return '🧠';
+  return '';
+}
 
 function esc(str) {
   if (str === null || str === undefined) return '';

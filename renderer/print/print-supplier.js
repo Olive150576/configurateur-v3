@@ -164,13 +164,15 @@ function renderSupplierGroup(group) {
 
     // Lignes tableau
     const modulesList = modules.map(m => {
+      const emoji  = getEmoji(m.name);
       const dimStr = m.dimensions ? ` <span style="font-size:9px;color:#9ca3af">— ${esc(m.dimensions)}</span>` : '';
-      return `<div class="desig-module">↳ ${esc(m.name)}${m.qty > 1 ? ` × ${m.qty}` : ''}${dimStr}</div>`;
+      return `<div class="desig-module">↳ ${emoji ? emoji + ' ' : ''}${esc(m.name)}${m.qty > 1 ? ` × ${m.qty}` : ''}${dimStr}</div>`;
     }).join('');
 
-    const optionsList = options.map(o =>
-      `<div class="desig-option">＋ ${esc(o.name)}${o.qty > 1 ? ` × ${o.qty}` : ''}</div>`
-    ).join('');
+    const optionsList = options.map(o => {
+      const emoji = getEmoji(o.name);
+      return `<div class="desig-option">＋ ${emoji ? emoji + ' ' : ''}${esc(o.name)}${o.qty > 1 ? ` × ${o.qty}` : ''}</div>`;
+    }).join('');
 
     const colorBlock = colorRef
       ? `<div><span class="desig-coloris">🎨 ${esc(colorRef)}</span></div>`
@@ -257,6 +259,16 @@ function extractRangeName(designation) {
 function formatDate(str) {
   if (!str) return new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
   return new Date(str).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+}
+
+function getEmoji(text) {
+  const t = (text || '').toLowerCase();
+  if (/relax/.test(t))                                     return '⚡';
+  if (/batter/.test(t))                                    return '🔋';
+  if (/coutur|broderi|surpiq/.test(t))                     return '🎨';
+  if (/pays|fabrication|fabriqué|made in|origine/.test(t)) return '🌍';
+  if (/mémoire|memoire|memory/.test(t))                    return '🧠';
+  return '';
 }
 
 function esc(str) {
