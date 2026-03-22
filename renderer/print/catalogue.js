@@ -149,15 +149,6 @@ function renderProductPage(p, company, logo, companyName, vatRate, pageNum, tota
         </div>
       </div>
 
-      <!-- GAMMES ET PRIX TTC -->
-      ${ranges.length ? `
-      <div class="cat-ranges">
-        <div class="cat-section-title">Tarifs TTC (${vatRate}% TVA)</div>
-        <div class="ranges-grid">
-          ${ranges.map(r => renderRangeCard(r)).join('')}
-        </div>
-      </div>` : ''}
-
       <!-- MODULES -->
       ${modules.length ? `
       <div class="cat-modules">
@@ -214,19 +205,6 @@ function renderHeader(p, logo, companyName, company, pageNum, total) {
         </div>
         <div class="cat-page-num">Fiche ${pageNum} / ${total}</div>
       </div>
-    </div>`;
-}
-
-function renderRangeCard(r) {
-  const [int, dec] = formatPrice(r.saleTTC);
-  return `
-    <div class="range-card">
-      <div class="range-name">${escHtml(r.name)}</div>
-      ${r.dimensions ? `<div class="range-dims">${escHtml(r.dimensions)}</div>` : '<div class="range-dims"></div>'}
-      <div class="range-price">
-        <sup>€</sup>${int}${dec !== '00' ? `<sup style="font-size:12px">${dec}</sup>` : ''}
-      </div>
-      <div class="range-ttc">TTC à partir de</div>
     </div>`;
 }
 
