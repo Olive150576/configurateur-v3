@@ -358,8 +358,9 @@ async function openPrint() {
     return;
   }
 
-  const tissu = document.getElementById('input-tissu').value.trim();
-  const badge = document.getElementById('input-badge').value.trim();
+  const tissu   = document.getElementById('input-tissu').value.trim();
+  const badge   = document.getElementById('input-badge').value.trim();
+  const showQR  = document.getElementById('input-show-qr').checked ? '1' : '0';
   const configs = JSON.stringify(tileCombinations.map(t => ({
     title:      t.title,
     price:      t.salePrice,
@@ -367,7 +368,7 @@ async function openPrint() {
   })));
 
   try {
-    await window.api.etiquette.print(selectedProduct.id, { tissu, badge, configs });
+    await window.api.etiquette.print(selectedProduct.id, { tissu, badge, configs, showQR });
   } catch (e) {
     Utils.toast('Erreur : ' + e.message, 'error');
   }

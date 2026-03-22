@@ -110,7 +110,7 @@ async function openSupplierDocument(documentId) {
  * @param {object} config { tissu, badge, rangeIds, optionIds }
  */
 async function openEtiquette(productId, config = {}) {
-  const { tissu = '', badge = '', configs = '[]' } = config;
+  const { tissu = '', badge = '', configs = '[]', showQR = '0' } = config;
 
   const win = new BrowserWindow({
     width:  880,
@@ -131,6 +131,7 @@ async function openEtiquette(productId, config = {}) {
       tissu,
       badge,
       configs: encodeURIComponent(configs),
+      showQR,
     },
   });
 

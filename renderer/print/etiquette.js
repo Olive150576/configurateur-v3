@@ -13,6 +13,7 @@ const params    = new URLSearchParams(window.location.search);
 const productId = params.get('productId') || '';
 const tissuRef  = params.get('tissu')     || '';
 const badgeText = params.get('badge')     || '';
+const showQR    = params.get('showQR')    === '1';
 
 /** Tuiles = [{title, price}, ...] — prix de vente déjà calculés */
 let tileConfigs = [];
@@ -64,15 +65,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       company[k] = (configResults[i]?.ok ? configResults[i].data : '') || '';
     });
 
-    // Génération QR code
-    const qrText = company.company_website
-      ? `${company.company_website.replace(/\/$/, '')}/produits/${product.id}`
-      : [product.name, product.collection, product.supplier_name].filter(Boolean).join(' — ');
+    // Génération QR code (seulement si activé par l'utilisateur)
     let qrDataUrl = '';
-    try {
-      const qrRes = await window.api.products.generateQR(qrText);
-      if (qrRes?.ok) qrDataUrl = qrRes.data;
-    } catch (_) { /* QR facultatif */ }
+    if (showQR) {
+      const qrText = company.company_website
+        ? `${company.company_website.replace(/\/$/, '')}/produits/${product.id}`
+        : [product.name, product.collection, product.supplier_name].filter(Boolean).join(' — ');
+      try {
+        const qrRes = await window.api.products.generateQR(qrText);
+        if (qrRes?.ok) qrDataUrl = qrRes.data;
+      } catch (_) { /* QR facultatif */ }
+    }
 
     render(product, company, qrDataUrl);
   } catch (e) {
