@@ -104,5 +104,7 @@ contextBridge.exposeInMainWorld('api', {
     getDashboard:        ()        => ipcRenderer.invoke('app:getDashboard'),
     getAutoBackupStatus: ()        => ipcRenderer.invoke('app:getAutoBackupStatus'),
     getLogo:       ()        => ipcRenderer.invoke('app:getConfig', 'company_logo'),
+    exportDb:      ()        => ipcRenderer.invoke('app:exportDb'),
+    importDb:      ()        => ipcRenderer.invoke('app:importDb'),
   },
 });

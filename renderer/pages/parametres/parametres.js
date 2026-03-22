@@ -116,6 +116,8 @@ async function saveDefaultSettings() {
 async function loadBackups() {
   document.getElementById('btn-backup-now').onclick = handleBackupNow;
   document.getElementById('btn-refresh-backups').onclick = refreshBackups;
+  document.getElementById('btn-export-db').onclick = handleExportDb;
+  document.getElementById('btn-import-db').onclick = handleImportDb;
   document.getElementById('btn-save-auto-backup').onclick = saveAutoBackupSettings;
   document.getElementById('auto-backup-enabled').addEventListener('change', e => {
     document.getElementById('auto-backup-settings').style.opacity = e.target.checked ? '1' : '0.4';
@@ -238,6 +240,38 @@ function renderBackups(backups) {
       </td>
     </tr>
   `).join('');
+}
+
+async function handleExportDb() {
+  const btn = document.getElementById('btn-export-db');
+  btn.disabled = true;
+  btn.textContent = 'Export en cours...';
+  try {
+    const res = await window.api.app.exportDb();
+    if (res.ok && res.data.exported) {
+      Utils.toast('Données exportées avec succès', 'success');
+    } else if (res.ok) {
+      // annulé par l'utilisateur
+    } else {
+      Utils.toast('Erreur export : ' + res.error, 'error');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📤 Exporter les données';
+  }
+}
+
+async function handleImportDb() {
+  const btn = document.getElementById('btn-import-db');
+  const confirmed = window.confirm(
+    'Cette action remplace TOUTES vos données actuelles et redémarre l\'application.\nUne sauvegarde automatique sera créée avant l\'import.\n\nContinuer ?'
+  );
+  if (!confirmed) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Import en cours...';
+  await window.api.app.importDb();
+  // L'app redémarre — pas besoin de gérer la suite
 }
 
 async function handleBackupNow() {

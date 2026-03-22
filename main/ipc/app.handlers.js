@@ -2,14 +2,54 @@
  * IPC Handlers — Application (config, backup, stats)
  */
 
-const { getDb } = require('../db/database');
+const { getDb, getDbPath, backupDatabase } = require('../db/database');
 const BackupService = require('../services/BackupService');
+const { dialog, app, BrowserWindow } = require('electron');
+const fs   = require('fs');
+const path = require('path');
 
 function register(ipcMain) {
   // Backup
   ipcMain.handle('app:backup',     () => wrap(() => BackupService.backup()));
   ipcMain.handle('app:getBackups', () => wrap(() => BackupService.getBackups()));
   ipcMain.handle('app:restore',    (_, file) => wrap(() => BackupService.restore(file)));
+
+  // Export DB vers un emplacement choisi par l'utilisateur
+  ipcMain.handle('app:exportDb', async () => {
+    const win = BrowserWindow.getFocusedWindow();
+    const date = new Date().toISOString().slice(0, 10);
+    const { canceled, filePath } = await dialog.showSaveDialog(win, {
+      title: 'Exporter les données',
+      defaultPath: `configurateur-export-${date}.db`,
+      filters: [{ name: 'Base de données', extensions: ['db'] }],
+    });
+    if (canceled || !filePath) return { exported: false };
+    await backupDatabase(filePath);
+    return { exported: true, path: filePath };
+  });
+
+  // Import DB depuis un fichier choisi par l'utilisateur
+  ipcMain.handle('app:importDb', async () => {
+    const win = BrowserWindow.getFocusedWindow();
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+      title: 'Importer les données',
+      filters: [{ name: 'Base de données', extensions: ['db'] }],
+      properties: ['openFile'],
+    });
+    if (canceled || !filePaths.length) return { imported: false };
+
+    // Sauvegarde de sécurité avant écrasement
+    await BackupService.backup();
+
+    const db = getDb();
+    db.close();
+
+    fs.copyFileSync(filePaths[0], getDbPath());
+
+    app.relaunch();
+    app.exit(0);
+    return { imported: true };
+  });
 
   // Statut sauvegarde automatique
   ipcMain.handle('app:getAutoBackupStatus', () => wrap(() => {
