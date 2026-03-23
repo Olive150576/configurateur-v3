@@ -1029,12 +1029,14 @@ function normalizeProductFromV2(p) {
     id: r.id,
     name: r.name,
     base_price: r.basePrice ?? r.base_price ?? 0,
+    dimensions: r.dimensions || '',
   }));
 
   const modules = (p.modules || []).map(m => ({
     id: m.id,
     name: m.name,
     description: m.description || '',
+    dimensions: m.dimensions || '',
     prices: m.priceByRange || m.prices || {},
   }));
 

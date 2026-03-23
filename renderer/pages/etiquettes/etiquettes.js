@@ -12,6 +12,7 @@ let allProducts      = [];
 let filteredProducts = [];
 let selectedProduct  = null;
 let companyLogo      = '';
+let vatRate          = 20;
 
 /** Tuiles construites par l'utilisateur. Chaque tuile = { id, title, salePrice } */
 let tileCombinations = [];
@@ -25,7 +26,7 @@ function applyRounding(price, mode) {
 }
 
 function salePrice(purchasePrice, coeff, rounding) {
-  return applyRounding((purchasePrice || 0) * coeff, rounding);
+  return applyRounding((purchasePrice || 0) * coeff * (1 + vatRate / 100), rounding);
 }
 
 function formatPrice(n) {
@@ -43,8 +44,12 @@ function getRounding() { return selectedProduct?.price_rounding ?? 'none'; }
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const logoRes = await window.api.app.getConfig('company_logo').catch(() => ({ ok: false, data: '' }));
+  const [logoRes, vatRes] = await Promise.all([
+    window.api.app.getConfig('company_logo').catch(() => ({ ok: false, data: '' })),
+    window.api.app.getConfig('vat_rate').catch(() => ({ ok: false, data: '' })),
+  ]);
   companyLogo = logoRes?.ok ? (logoRes.data || '') : '';
+  vatRate = parseFloat(vatRes?.ok ? vatRes.data : '') || 20;
 
   const res = await window.api.products.getAll().catch(() => ({ ok: false, data: [] }));
   allProducts = (res.ok ? res.data : []).filter(p => p.active && !p.archived);
