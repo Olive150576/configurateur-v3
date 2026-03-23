@@ -77,27 +77,52 @@ app.whenReady().then(async () => {
 // ── Auto-updater ──────────────────────────────────────────────────────────────
 
 autoUpdater.autoDownload = false;
-autoUpdater.logger = null;
+autoUpdater.logger = require('electron-log');
+autoUpdater.logger.transports.file.level = 'info';
 
-function checkForUpdates() {
-  // Ne vérifie que dans l'app packagée (pas en mode dev)
-  if (!app.isPackaged) return;
-  autoUpdater.checkForUpdates().catch(() => {});
+function sendToMain(channel, payload) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, payload);
+  }
 }
 
+function checkForUpdates() {
+  if (!app.isPackaged) {
+    console.log('[Updater] App non packagée, vérification ignorée');
+    return;
+  }
+  console.log('[Updater] Vérification des mises à jour…');
+  autoUpdater.checkForUpdates().catch(err => {
+    console.error('[Updater] Erreur checkForUpdates:', err.message);
+    sendToMain('update:error', { message: err.message });
+  });
+}
+
+autoUpdater.on('checking-for-update', () => {
+  console.log('[Updater] Vérification en cours…');
+});
+
 autoUpdater.on('update-available', (info) => {
-  const win = BrowserWindow.getAllWindows()[0];
-  if (win) win.webContents.send('update:available', { version: info.version });
+  console.log('[Updater] Mise à jour disponible:', info.version);
+  sendToMain('update:available', { version: info.version });
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  console.log('[Updater] Pas de mise à jour (version actuelle:', info.version, ')');
 });
 
 autoUpdater.on('download-progress', (progress) => {
-  const win = BrowserWindow.getAllWindows()[0];
-  if (win) win.webContents.send('update:progress', { percent: Math.round(progress.percent) });
+  sendToMain('update:progress', { percent: Math.round(progress.percent) });
 });
 
 autoUpdater.on('update-downloaded', () => {
-  const win = BrowserWindow.getAllWindows()[0];
-  if (win) win.webContents.send('update:ready');
+  console.log('[Updater] Mise à jour téléchargée, prête à installer');
+  sendToMain('update:ready');
+});
+
+autoUpdater.on('error', (err) => {
+  console.error('[Updater] Erreur:', err.message);
+  sendToMain('update:error', { message: err.message });
 });
 
 ipcMain.handle('update:check',    () => wrap(() => { checkForUpdates(); return { checking: true }; }));

@@ -91,6 +91,7 @@ contextBridge.exposeInMainWorld('api', {
     onAvailable: (cb) => ipcRenderer.on('update:available', (_, info) => cb(info)),
     onProgress:  (cb) => ipcRenderer.on('update:progress',  (_, info) => cb(info)),
     onReady:     (cb) => ipcRenderer.on('update:ready',     ()        => cb()),
+    onError:     (cb) => ipcRenderer.on('update:error',     (_, info) => cb(info)),
   },
 
   // ==================== APP ====================

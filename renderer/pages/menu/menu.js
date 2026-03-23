@@ -130,6 +130,11 @@ function setupAutoUpdater() {
     banner.onclick = () => window.api.update.install();
   });
 
+  window.api.update.onError?.((info) => {
+    verEl.textContent = verEl.dataset.ver || 'V3';
+    console.warn('[Update] Erreur:', info.message);
+  });
+
   // Vérification automatique au chargement de la page
   window.api.update.check();
 }
