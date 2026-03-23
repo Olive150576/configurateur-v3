@@ -93,11 +93,26 @@ async function checkAutoBackupNotif() {
 function setupAutoUpdater() {
   if (!window.api?.update) return;
 
-  const banner = document.getElementById('update-banner');
+  const banner  = document.getElementById('update-banner');
+  const verEl   = document.getElementById('app-version');
+
+  // Rendre le numéro de version cliquable pour forcer la vérification
+  verEl.title  = 'Cliquer pour vérifier les mises à jour';
+  verEl.style.cursor = 'pointer';
+  verEl.onclick = () => {
+    verEl.textContent = 'Vérification…';
+    window.api.update.check();
+    setTimeout(() => {
+      if (!banner || banner.style.display === 'none') {
+        verEl.textContent = verEl.dataset.ver || 'V3';
+      }
+    }, 8000);
+  };
 
   window.api.update.onAvailable((info) => {
     banner.textContent = `⬇ Mise à jour v${info.version} disponible`;
     banner.style.display = 'block';
+    verEl.textContent = verEl.dataset.ver || 'V3';
     banner.onclick = () => {
       banner.textContent = 'Téléchargement…';
       banner.onclick = null;
@@ -114,8 +129,23 @@ function setupAutoUpdater() {
     banner.style.background = 'rgba(34,197,94,0.9)';
     banner.onclick = () => window.api.update.install();
   });
+
+  // Vérification automatique au chargement de la page
+  window.api.update.check();
 }
 
 loadDashboard();
 checkAutoBackupNotif();
-setupAutoUpdater();
+
+// Afficher la vraie version depuis Electron
+(async () => {
+  if (window.api?.app?.getVersion) {
+    const res = await window.api.app.getVersion().catch(() => null);
+    if (res?.ok) {
+      const verEl = document.getElementById('app-version');
+      verEl.textContent      = `v${res.data}`;
+      verEl.dataset.ver      = `v${res.data}`;
+    }
+  }
+  setupAutoUpdater();
+})();

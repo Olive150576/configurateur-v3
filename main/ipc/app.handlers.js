@@ -9,6 +9,9 @@ const fs   = require('fs');
 const path = require('path');
 
 function register(ipcMain) {
+  // Version
+  ipcMain.handle('app:getVersion', () => ({ ok: true, data: app.getVersion() }));
+
   // Backup
   ipcMain.handle('app:backup',     () => wrap(() => BackupService.backup()));
   ipcMain.handle('app:getBackups', () => wrap(() => BackupService.getBackups()));

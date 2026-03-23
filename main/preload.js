@@ -106,5 +106,6 @@ contextBridge.exposeInMainWorld('api', {
     getLogo:       ()        => ipcRenderer.invoke('app:getConfig', 'company_logo'),
     exportDb:      ()        => ipcRenderer.invoke('app:exportDb'),
     importDb:      ()        => ipcRenderer.invoke('app:importDb'),
+    getVersion:    ()        => ipcRenderer.invoke('app:getVersion'),
   },
 });
