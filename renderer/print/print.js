@@ -374,11 +374,11 @@ function renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate) {
           <span>TVA ${vatRate}%</span>
           <span>${formatPrice(vatAmt)} €</span>
         </div>
-        <div class="total-ht-row">
-          <span>Total TTC</span>
-          <span>${formatPrice(totalTTC_brut)} €</span>
-        </div>
         ${discAmt > 0 ? `
+          <div class="total-ht-row">
+            <span>Total TTC</span>
+            <span>${formatPrice(totalTTC_brut)} €</span>
+          </div>
           <div class="total-ht-row">
             <span>${discLabel}</span>
             <span>— ${formatPrice(discAmt)} €</span>

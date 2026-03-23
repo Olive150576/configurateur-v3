@@ -107,12 +107,13 @@ function update(id, data) {
   const db = getDb();
   db.prepare(`
     UPDATE documents SET
-      client_id = ?, client_snapshot = ?, product_snapshot = ?,
+      type = ?, client_id = ?, client_snapshot = ?, product_snapshot = ?,
       subtotal = ?, discount_percent = ?, discount_amount = ?,
       total = ?, deposit_percent = ?, deposit_amount = ?, balance = ?,
       notes = ?, updated_at = datetime('now')
     WHERE id = ?
   `).run(
+    data.type ?? existing.type,
     data.client_id ?? existing.client_id,
     JSON.stringify(data.client_snapshot ?? existing.client_snapshot),
     JSON.stringify(data.product_snapshot ?? existing.product_snapshot),
