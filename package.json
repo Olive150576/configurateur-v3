@@ -59,7 +59,8 @@
     "publish": {
       "provider": "github",
       "owner": "Olive150576",
-      "repo": "configurateur-v3"
+      "repo": "configurateur-v3",
+      "releaseType": "release"
     }
   }
 }
