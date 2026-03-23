@@ -162,8 +162,7 @@ function renderProductPage(p, company, logo, companyName, vatRate, pageNum, tota
             </tr>
           </thead>
           <tbody>
-            ${modules.slice(0, 12).map(m => renderModuleRow(m, ranges, coeff, vatRate)).join('')}
-            ${modules.length > 12 ? `<tr><td colspan="${2 + ranges.length}" style="font-size:8px;color:#bbb;padding-top:6px">+ ${modules.length - 12} autre(s) module(s)</td></tr>` : ''}
+            ${modules.map(m => renderModuleRow(m, ranges, coeff, vatRate)).join('')}
           </tbody>
         </table>
       </div>` : ''}
