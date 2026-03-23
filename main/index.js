@@ -77,8 +77,7 @@ app.whenReady().then(async () => {
 // ── Auto-updater ──────────────────────────────────────────────────────────────
 
 autoUpdater.autoDownload = false;
-autoUpdater.logger = require('electron-log');
-autoUpdater.logger.transports.file.level = 'info';
+autoUpdater.logger = console;
 
 function sendToMain(channel, payload) {
   if (mainWindow && !mainWindow.isDestroyed()) {
