@@ -56,7 +56,7 @@ function setupSearch() {
 
 function setupProductModal() {
   document.getElementById('btn-new-product')
-    .addEventListener('click', openProductModal);
+    .addEventListener('click', () => openProductModal());
   document.getElementById('btn-save-product')
     .addEventListener('click', handleSaveProduct);
 
