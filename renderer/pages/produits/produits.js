@@ -236,7 +236,7 @@ function switchView(view) {
 
   const newBtn = document.getElementById('btn-new-product');
   const searchWrapper = document.querySelector('.search-wrapper');
-  newBtn.style.display = view === 'list' ? 'inline-flex' : 'none';
+  newBtn.style.display = 'inline-flex';
   searchWrapper.style.display = view === 'list' ? 'flex' : 'none';
 
   if (view === 'archived') loadArchivedProducts();
