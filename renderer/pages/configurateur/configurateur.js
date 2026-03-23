@@ -508,9 +508,10 @@ function renderConfigOptions() {
 
   const coeff = state.cfg.product.purchase_coefficient ?? 2.0;
   container.innerHTML = options.map(o => {
-    const qty     = state.cfg.options[o.id] || 0;
-    const sel     = qty > 0;
-    const pvPrice = round2(o.price * coeff);
+    const qty      = state.cfg.options[o.id] || 0;
+    const sel      = qty > 0;
+    const oCoeff   = o.coefficient != null ? o.coefficient : coeff;
+    const pvPrice  = round2(o.price * oCoeff);
     return `
       <div class="option-row ${sel ? 'selected' : ''}" id="orow-${o.id}">
         <input type="checkbox" ${sel ? 'checked' : ''}
@@ -570,16 +571,20 @@ function recalcConfigTotal() {
     }
   });
 
-  let optionsTotal = 0;
-  state.cfg.product.options.forEach(o => {
-    const qty = state.cfg.options[o.id] || 0;
-    if (qty > 0) optionsTotal += o.price * qty;
-  });
-
   const coeff  = state.cfg.product.purchase_coefficient ?? 2.0;
   const mode   = state.cfg.product.price_rounding ?? 'none';
+
+  let optionsTotal = 0;
+  state.cfg.product.options.forEach(o => {
+    const qty    = state.cfg.options[o.id] || 0;
+    if (qty > 0) {
+      const oCoeff = o.coefficient != null ? o.coefficient : coeff;
+      optionsTotal += round2(o.price * oCoeff) * qty;
+    }
+  });
+
   // PA × coeff = TTC (arrondi selon le mode choisi)
-  const pvTTC  = applyRounding(round2((base + modulesTotal + optionsTotal) * coeff), mode);
+  const pvTTC  = applyRounding(round2(base * coeff) + round2(modulesTotal * coeff) + optionsTotal, mode);
   const pvHT   = round2(pvTTC / (1 + state.vatRate / 100));
   const vatAmt = round2(pvTTC - pvHT);
   const qty    = Math.max(1, parseInt(document.getElementById('config-qty').value) || 1);
@@ -588,7 +593,7 @@ function recalcConfigTotal() {
 
   document.getElementById('ct-base').textContent       = Utils.formatPrice(round2(base * coeff));
   document.getElementById('ct-modules').textContent    = Utils.formatPrice(round2(modulesTotal * coeff));
-  document.getElementById('ct-options').textContent    = Utils.formatPrice(round2(optionsTotal * coeff));
+  document.getElementById('ct-options').textContent    = Utils.formatPrice(optionsTotal);
   document.getElementById('ct-unit-total').textContent = Utils.formatPrice(pvHT);
   document.getElementById('ct-vat-label').textContent  = `TVA ${state.vatRate}%`;
   document.getElementById('ct-vat').textContent        = Utils.formatPrice(vatAmt);
@@ -619,12 +624,13 @@ function handleAddConfig() {
       return { id: m.id, name: m.name, description: m.description || '', dimensions: m.dimensions || '', qty: mQty, unit_price: sellPrice, total: round2(sellPrice * mQty) };
     });
 
-  // Options sélectionnées (prix = PA × coeff, qty supportée)
+  // Options sélectionnées (prix = PA × coeff option ou coeff produit)
   const selectedOptions = product.options
     .filter(o => (state.cfg.options[o.id] || 0) > 0)
     .map(o => {
-      const oQty  = state.cfg.options[o.id];
-      const pvPrc = round2(o.price * coeff);
+      const oQty   = state.cfg.options[o.id];
+      const oCoeff = o.coefficient != null ? o.coefficient : coeff;
+      const pvPrc  = round2(o.price * oCoeff);
       return { id: o.id, name: o.name, description: o.description || '', qty: oQty, price: pvPrc, total: round2(pvPrc * oQty) };
     });
 

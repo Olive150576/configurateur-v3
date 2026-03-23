@@ -793,11 +793,12 @@ function openOptionModal(idx = null) {
   state.editingOptionIdx = idx;
   const option = idx !== null ? state.editingOptions[idx] : null;
 
-  document.getElementById('o-id').value    = option?.id          ?? '';
-  document.getElementById('o-name').value  = option?.name        ?? '';
-  document.getElementById('o-price').value = option?.price       ?? '';
-  document.getElementById('o-type').value  = option?.type        ?? '';
-  document.getElementById('o-desc').value  = option?.description ?? '';
+  document.getElementById('o-id').value          = option?.id          ?? '';
+  document.getElementById('o-name').value        = option?.name        ?? '';
+  document.getElementById('o-price').value       = option?.price       ?? '';
+  document.getElementById('o-type').value        = option?.type        ?? '';
+  document.getElementById('o-desc').value        = option?.description ?? '';
+  document.getElementById('o-coefficient').value = option?.coefficient != null ? option.coefficient : '';
   document.getElementById('o-id').disabled = idx !== null;
 
   ['o-id','o-name','o-price'].forEach(id => document.getElementById(id).classList.remove('error'));
@@ -823,6 +824,8 @@ function handleSaveOption() {
   const price = parseFloat(document.getElementById('o-price').value);
   const type  = document.getElementById('o-type').value;
   const desc  = document.getElementById('o-desc').value.trim();
+  const coeffRaw = document.getElementById('o-coefficient').value.trim();
+  const coefficient = coeffRaw !== '' ? parseFloat(coeffRaw) : null;
 
   let valid = true;
   if (!id)          { showFieldError('o-id',    'err-o-id',    'ID obligatoire');   valid = false; }
@@ -841,11 +844,11 @@ function handleSaveOption() {
       showFieldError('o-id', 'err-o-id', 'Cet ID existe déjà');
       return;
     }
-    state.editingOptions.push({ id, name, price, type, description: desc });
+    state.editingOptions.push({ id, name, price, type, description: desc, coefficient });
   } else {
     state.editingOptions[state.editingOptionIdx] = {
       ...state.editingOptions[state.editingOptionIdx],
-      name, price, type, description: desc
+      name, price, type, description: desc, coefficient
     };
   }
 
@@ -934,6 +937,7 @@ function renderOptionsList() {
         <div class="nested-item-meta">
           ${Utils.formatPrice(o.price)}
           ${o.type ? ` · ${typeLabels[o.type] ?? o.type}` : ''}
+          ${o.coefficient != null ? ` · Coeff: ${o.coefficient}` : ''}
         </div>
       </div>
       <div class="flex gap-2">

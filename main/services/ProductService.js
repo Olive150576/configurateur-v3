@@ -140,12 +140,12 @@ function create(data) {
     for (let i = 0; i < (data.options || []).length; i++) {
       const o = data.options[i];
       db.prepare(`
-        INSERT INTO options (id, product_id, name, description, price, type, sort_order)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO options (id, product_id, name, description, price, type, coefficient, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         generateId('opt'), id,
         o.name.trim(), o.description?.trim() || '',
-        o.price, o.type || '', i
+        o.price, o.type || '', o.coefficient ?? null, i
       );
     }
   });
@@ -223,12 +223,12 @@ function update(id, data) {
       for (let i = 0; i < data.options.length; i++) {
         const o = data.options[i];
         db.prepare(`
-          INSERT INTO options (id, product_id, name, description, price, type, sort_order)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO options (id, product_id, name, description, price, type, coefficient, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           o.id || generateId('opt'), id,
           o.name.trim(), o.description?.trim() || '',
-          o.price, o.type || '', i
+          o.price, o.type || '', o.coefficient ?? null, i
         );
       }
     }
