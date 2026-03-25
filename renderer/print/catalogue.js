@@ -114,8 +114,8 @@ function renderProductPage(p, company, logo, companyName, vatRate, pageNum, tota
 
   const ranges = (p.ranges || []).map(r => ({
     ...r,
-    saleHT:  applyRounding(parseFloat(r.base_price) * coeff, rounding),
-    saleTTC: applyRounding(parseFloat(r.base_price) * coeff * (1 + vatRate / 100), rounding),
+    // PA × coeff = prix TTC direct
+    saleTTC: applyRounding(parseFloat(r.base_price) * coeff, rounding),
   }));
 
   const modules = p.modules || [];
@@ -162,7 +162,7 @@ function renderProductPage(p, company, logo, companyName, vatRate, pageNum, tota
             </tr>
           </thead>
           <tbody>
-            ${modules.map(m => renderModuleRow(m, ranges, coeff, vatRate)).join('')}
+            ${modules.map(m => renderModuleRow(m, ranges, coeff, rounding)).join('')}
           </tbody>
         </table>
       </div>` : ''}
@@ -172,7 +172,7 @@ function renderProductPage(p, company, logo, companyName, vatRate, pageNum, tota
       <div class="cat-options">
         <div class="cat-section-title" style="margin-bottom:8px">Options & finitions</div>
         <div class="options-list">
-          ${options.map(o => renderOptionChip(o, coeff, vatRate)).join('')}
+          ${options.map(o => renderOptionChip(o, coeff, rounding)).join('')}
         </div>
       </div>` : ''}
 
@@ -207,12 +207,12 @@ function renderHeader(p, logo, companyName, company, pageNum, total) {
     </div>`;
 }
 
-function renderModuleRow(m, ranges, coeff, vatRate) {
-  // Prix module : purchase HT × coeff × (1 + TVA)
+function renderModuleRow(m, ranges, coeff, rounding) {
+  // Prix module : PA × coeff = TTC direct
   const priceCells = ranges.map(r => {
     const purchaseHT = parseFloat((m.prices || {})[r.id]);
     if (!purchaseHT) return `<td class="right price-cell" style="color:#ccc">—</td>`;
-    const priceTTC = Math.round(purchaseHT * coeff * (1 + vatRate / 100));
+    const priceTTC = applyRounding(purchaseHT * coeff, rounding);
     return `<td class="right price-cell">${Number(priceTTC).toLocaleString('fr-FR')} €</td>`;
   });
 
@@ -224,13 +224,17 @@ function renderModuleRow(m, ranges, coeff, vatRate) {
     </tr>`;
 }
 
-function renderOptionChip(o, coeff, vatRate) {
-  const priceHT  = parseFloat(o.price) || 0;
-  const priceTTC = Math.round(priceHT * coeff * (1 + vatRate / 100));
+function renderOptionChip(o, coeff, rounding) {
+  // PA × coeff = TTC direct (utilise le coefficient spécifique de l'option si défini)
+  const priceHT     = parseFloat(o.price) || 0;
+  const optionCoeff = (o.coefficient !== null && o.coefficient !== undefined)
+    ? parseFloat(o.coefficient)
+    : coeff;
+  const priceTTC = applyRounding(priceHT * optionCoeff, rounding);
   return `
     <div class="opt-chip">
       <span>${escHtml(o.name)}</span>
-      ${priceTTC > 0 ? `<span class="opt-chip-price">+${Number(priceTTC).toLocaleString('fr-FR')} €</span>` : ''}
+      ${priceTTC > 0 ? `<span class="opt-chip-price">+${Number(priceTTC).toLocaleString('fr-FR')} €/assise</span>` : ''}
     </div>`;
 }
 

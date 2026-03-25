@@ -109,7 +109,7 @@
     .cat-photo img { max-width: 100%; max-height: 100%; object-fit: contain; }
     .cat-photo-ph { color: #ccc; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; text-align: center; }
 
-    .cat-description { flex: 1; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+    .cat-description { flex: 1; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
     .cat-desc-title { font-size: 9px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); }
     .cat-desc-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
     .cat-desc-list li { font-family: var(--serif); font-size: 11px; color: var(--black); line-height: 1.5; display: flex; gap: 6px; }
@@ -119,17 +119,17 @@
     /* ── MODULES ── */
     .cat-section-title { font-size: 9px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
     .cat-modules { flex-shrink: 0; border-bottom: 1px solid #e8e8e8; padding: 10px 26px; }
-    .modules-table { width: 100%; border-collapse: collapse; font-size: 9px; }
+    .modules-table { width: 100%; border-collapse: collapse; font-size: 11px; }
     .modules-table th {
-      text-align: left; font-size: 8px; font-weight: 700; letter-spacing: 1px;
+      text-align: left; font-size: 9px; font-weight: 700; letter-spacing: 1px;
       text-transform: uppercase; color: var(--gold);
-      border-bottom: 1px solid #e8e8e8; padding: 0 6px 5px 0;
+      border-bottom: 1px solid #e8e8e8; padding: 0 8px 6px 0;
     }
-    .modules-table th.right { text-align: right; padding-right: 0; padding-left: 6px; }
-    .modules-table td { padding: 4px 6px 4px 0; border-bottom: 1px dashed #f0f0f0; color: var(--black); vertical-align: middle; }
-    .modules-table td.right { text-align: right; padding-right: 0; padding-left: 6px; }
+    .modules-table th.right { text-align: right; padding-right: 0; padding-left: 10px; border-left: 1px solid #e0e0e0; }
+    .modules-table td { padding: 5px 8px 5px 0; border-bottom: 1px dashed #f0f0f0; color: var(--black); vertical-align: middle; }
+    .modules-table td.right { text-align: right; padding-right: 4px; padding-left: 10px; border-left: 1px solid #ececec; }
     .modules-table td.price-cell { font-family: var(--serif); font-size: 12px; font-weight: 700; white-space: nowrap; }
-    .modules-table td.dims-cell { font-size: 7.5px; color: var(--light); }
+    .modules-table td.dims-cell { font-size: 9px; color: var(--light); }
     .modules-table tr:last-child td { border-bottom: none; }
 
     /* ── OPTIONS ── */

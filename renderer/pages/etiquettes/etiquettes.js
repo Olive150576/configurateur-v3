@@ -26,7 +26,8 @@ function applyRounding(price, mode) {
 }
 
 function salePrice(purchasePrice, coeff, rounding) {
-  return applyRounding((purchasePrice || 0) * coeff * (1 + vatRate / 100), rounding);
+  // PA × coeff = prix TTC direct (la TVA est déjà incluse dans le coefficient)
+  return applyRounding((purchasePrice || 0) * coeff, rounding);
 }
 
 function formatPrice(n) {
@@ -170,12 +171,14 @@ function renderBuilder() {
   if (options.length) {
     optsContainer.style.display = '';
     optsEl.innerHTML = options.map(o => {
-      const pv = salePrice(o.price, getCoeff(), getRounding());
+      const optCoeff = (o.coefficient != null) ? o.coefficient : getCoeff();
+      const pv = salePrice(o.price, optCoeff, getRounding());
       return `
         <div class="builder-option-row"
              data-option-id="${o.id}"
              data-option-name="${Utils.escapeHtml(o.name)}"
-             data-option-price="${o.price}">
+             data-option-price="${o.price}"
+             data-option-coeff="${o.coefficient ?? ''}">
           <span class="builder-option-name">${Utils.escapeHtml(o.name)}</span>
           <span class="builder-option-unit">${formatPrice(pv)} / unité</span>
           <div class="qty-control">
@@ -224,14 +227,15 @@ function updateBuilderPrice() {
     basePurchase   = range?.base_price ?? 0;
   }
 
-  let extrasPurchase = 0;
+  let extrasTTC = 0;
   document.querySelectorAll('#builder-options .builder-option-row').forEach(row => {
-    const qty  = parseInt(row.querySelector('.qty-input').value) || 0;
-    const unit = parseFloat(row.dataset.optionPrice) || 0;
-    extrasPurchase += qty * unit;
+    const qty       = parseInt(row.querySelector('.qty-input').value) || 0;
+    const unit      = parseFloat(row.dataset.optionPrice) || 0;
+    const optCoeff  = row.dataset.optionCoeff !== '' ? parseFloat(row.dataset.optionCoeff) : coeff;
+    extrasTTC += qty * unit * optCoeff;
   });
 
-  const totalSale = salePrice(basePurchase + extrasPurchase, coeff, rounding);
+  const totalSale = applyRounding(basePurchase * coeff + extrasTTC, rounding);
   document.getElementById('builder-price').textContent = formatPrice(totalSale);
 }
 
@@ -266,18 +270,19 @@ function addTile() {
 
   // Extras (options avec qty > 0)
   const extras = [];
-  let extrasPurchase = 0;
+  let extrasTTC = 0;
   document.querySelectorAll('#builder-options .builder-option-row').forEach(row => {
-    const qty  = parseInt(row.querySelector('.qty-input').value) || 0;
+    const qty = parseInt(row.querySelector('.qty-input').value) || 0;
     if (qty > 0) {
-      const name = row.dataset.optionName;
-      const unit = parseFloat(row.dataset.optionPrice) || 0;
+      const name      = row.dataset.optionName;
+      const unit      = parseFloat(row.dataset.optionPrice) || 0;
+      const optCoeff  = row.dataset.optionCoeff !== '' ? parseFloat(row.dataset.optionCoeff) : coeff;
       extras.push({ name, qty, unit });
-      extrasPurchase += qty * unit;
+      extrasTTC += qty * unit * optCoeff;
     }
   });
 
-  const totalSale = salePrice(basePurchase + extrasPurchase, coeff, rounding);
+  const totalSale = applyRounding(basePurchase * coeff + extrasTTC, rounding);
 
   // Titre auto-généré
   let title = baseName.toUpperCase();

@@ -106,6 +106,13 @@ function escHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
+function applyRounding(price, mode) {
+  if (mode === 'integer') return Math.round(price);
+  if (mode === 'ten')     return Math.round(price / 10) * 10;
+  return Math.round(price * 100) / 100;
+}
+
+
 /** Retourne un emoji selon le contenu du texte (option ou ligne de description) */
 function getEmoji(text) {
   const t = (text || '').toLowerCase();
@@ -127,7 +134,9 @@ function render(product, company, qrDataUrl = '') {
     .filter(Boolean);
 
   // 3 premières options du produit pour la section "Options disponibles"
-  const options = (product.options || []).slice(0, 3);
+  const options       = (product.options || []).slice(0, 3);
+  const productCoeff  = parseFloat(product.purchase_coefficient) || 2.0;
+  const rounding      = product.price_rounding || 'none';
 
   const companyName = company.company_trade_name || company.company_name || '';
   const logo = company.company_logo || '';
@@ -205,7 +214,7 @@ function render(product, company, qrDataUrl = '') {
         <div class="options">
           <div class="section-title">Options disponibles</div>
           ${options.length
-            ? options.map(o => renderOption(o)).join('')
+            ? options.map(o => renderOption(o, productCoeff, rounding)).join('')
             : `<p style="font-size:11px;color:#aaa">Aucune option</p>`}
         </div>
       </div>
@@ -355,11 +364,21 @@ function renderTile(tile) {
 
 // ── Option (section bas de l'étiquette — informatif) ─────────────────────────
 
-function renderOption(opt) {
-  const emoji = getEmoji(opt.name) || getEmoji(opt.description || '');
+function renderOption(opt, productCoeff, rounding) {
+  const emoji    = getEmoji(opt.name) || getEmoji(opt.description || '');
+  const priceHT  = parseFloat(opt.price) || 0;
+  const optCoeff = (opt.coefficient != null) ? parseFloat(opt.coefficient) : productCoeff;
+  const priceTTC = priceHT ? applyRounding(priceHT * optCoeff, rounding) : 0;
+  const [int, dec] = priceTTC ? formatPrice(priceTTC) : ['', ''];
+
   return `
     <div class="option-item">
       <div class="option-name">${emoji ? `<span class="opt-emoji">${emoji}</span> ` : ''}${escHtml(opt.name)}</div>
       ${opt.description ? `<div class="option-desc">${escHtml(opt.description)}</div>` : ''}
+      ${priceTTC ? `
+      <div class="option-price-row">
+        <div class="option-price"><sup>€</sup>${int}${dec !== '00' ? `<sup>${dec}</sup>` : ''}</div>
+        <div class="option-unit">/assise</div>
+      </div>` : ''}
     </div>`;
 }
