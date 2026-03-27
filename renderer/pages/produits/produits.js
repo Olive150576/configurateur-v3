@@ -1128,7 +1128,12 @@ async function handleImportCsv() {
         const sr = await window.api.suppliers.findOrCreate(p.supplierName);
         if (sr.ok) supplier_id = sr.data.id;
       }
-      const res = await window.api.products.create({ ...p, supplier_id });
+      let res = await window.api.products.create({ ...p, supplier_id });
+      if (!res.ok && res.error && res.error.includes('UNIQUE constraint')) {
+        // Produit archivé avec le même ID → restaurer puis mettre à jour
+        await window.api.products.restore(p.id);
+        res = await window.api.products.update(p.id, { ...p, supplier_id });
+      }
       if (res.ok) imported++;
       else errors.push(`${p.name}: ${res.error}`);
     }
