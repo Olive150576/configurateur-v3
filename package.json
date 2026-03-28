@@ -1,6 +1,6 @@
 {
   "name": "configurateur-v3",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Configurateur de devis mobilier",
   "main": "main/index.js",
   "author": "Olive150576",
@@ -21,6 +21,7 @@
     "electron-rebuild": "^3.2.9"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.100.1",
     "better-sqlite3": "^12.8.0",
     "electron-updater": "^6.3.9",
     "qrcode": "^1.5.4"
@@ -41,7 +42,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },

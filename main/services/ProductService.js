@@ -1,8 +1,8 @@
 /**
- * ProductService — CRUD produits avec validation
+ * ProductService — CRUD produits via Supabase
  */
 
-const { getDb } = require('../db/database');
+const { getSupabase } = require('../db/supabase');
 const { validateProduct, ValidationError } = require('../utils/validator');
 const { log } = require('../utils/logger');
 
@@ -10,281 +10,291 @@ function generateId(prefix = 'prod') {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 }
 
-/**
- * Récupère tous les produits actifs avec leurs gammes, modules et options
- */
-function getAll(includeArchived = false) {
-  const db = getDb();
-
-  const products = db.prepare(`
-    SELECT p.*, s.name as supplier_name
-    FROM products p
-    LEFT JOIN suppliers s ON p.supplier_id = s.id
-    WHERE p.archived = ?
-    ORDER BY p.name
-  `).all(includeArchived ? 1 : 0);
-
-  return products.map(p => enrichProduct(p));
+function sbErr(error) {
+  throw new Error(error.message);
 }
 
 /**
- * Récupère un produit par ID avec toutes ses données
+ * Transforme un produit retourné par Supabase (relations imbriquées)
+ * vers le format attendu par le renderer.
  */
-function getById(id) {
-  const db = getDb();
+function normalizeProduct(p) {
+  const { suppliers, ranges, modules, options, ...product } = p;
 
-  const product = db.prepare(`
-    SELECT p.*, s.name as supplier_name
-    FROM products p
-    LEFT JOIN suppliers s ON p.supplier_id = s.id
-    WHERE p.id = ?
-  `).get(id);
+  return {
+    ...product,
+    supplier_name: suppliers?.name || null,
+    ranges: (ranges || []).sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name)),
+    modules: (modules || [])
+      .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
+      .map(m => {
+        const { module_prices, ...module } = m;
+        return {
+          ...module,
+          prices: Object.fromEntries((module_prices || []).map(mp => [mp.range_id, mp.price])),
+        };
+      }),
+    options: (options || []).sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name)),
+  };
+}
 
-  if (!product) return null;
-  return enrichProduct(product);
+const PRODUCT_SELECT = `
+  *,
+  suppliers(name),
+  ranges(*),
+  modules(*, module_prices(*)),
+  options(*)
+`;
+
+/**
+ * Récupère tous les produits actifs (ou archivés)
+ */
+async function getAll(includeArchived = false) {
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from('products')
+    .select(PRODUCT_SELECT)
+    .eq('archived', includeArchived ? 1 : 0)
+    .order('name');
+
+  if (error) sbErr(error);
+  return data.map(normalizeProduct);
 }
 
 /**
- * Enrichit un produit avec ses gammes, modules et options
+ * Récupère un produit par ID
  */
-function enrichProduct(product) {
-  const db = getDb();
+async function getById(id) {
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from('products')
+    .select(PRODUCT_SELECT)
+    .eq('id', id)
+    .single();
 
-  const ranges = db.prepare(
-    'SELECT * FROM ranges WHERE product_id = ? ORDER BY sort_order, name'
-  ).all(product.id);
-
-  const modules = db.prepare(
-    'SELECT * FROM modules WHERE product_id = ? ORDER BY sort_order, name'
-  ).all(product.id);
-
-  // Charger les prix par gamme pour chaque module
-  const modulesWithPrices = modules.map(module => {
-    const prices = db.prepare(
-      'SELECT range_id, price FROM module_prices WHERE module_id = ?'
-    ).all(module.id);
-
-    return {
-      ...module,
-      prices: Object.fromEntries(prices.map(p => [p.range_id, p.price]))
-    };
-  });
-
-  const options = db.prepare(
-    'SELECT * FROM options WHERE product_id = ? ORDER BY sort_order, name'
-  ).all(product.id);
-
-  return { ...product, ranges, modules: modulesWithPrices, options };
+  if (error) {
+    if (error.code === 'PGRST116') return null; // not found
+    sbErr(error);
+  }
+  return normalizeProduct(data);
 }
 
 /**
  * Crée un nouveau produit
  */
-function create(data) {
+async function create(data) {
   validateProduct(data);
 
-  const db = getDb();
+  const sb = getSupabase();
   const id = data.id || generateId('prod');
 
-  const insert = db.transaction(() => {
-    // Produit principal
-    db.prepare(`
-      INSERT INTO products (id, name, supplier_id, collection, description, active, valid_from, valid_until, purchase_coefficient, price_rounding, photo, supplier_notes)
-      VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
-    `).run(
-      id, data.name.trim(),
-      data.supplier_id || null,
-      data.collection?.trim() || '',
-      data.description?.trim() || '',
-      data.valid_from || null,
-      data.valid_until || null,
-      data.purchase_coefficient ?? 2.0,
-      data.price_rounding ?? 'none',
-      data.photo || '',
-      data.supplier_notes?.trim() || ''
-    );
+  // 1. Produit
+  const { error: pErr } = await sb.from('products').insert({
+    id,
+    name:                 data.name.trim(),
+    supplier_id:          data.supplier_id || null,
+    collection:           data.collection?.trim() || '',
+    description:          data.description?.trim() || '',
+    active:               1,
+    valid_from:           data.valid_from || null,
+    valid_until:          data.valid_until || null,
+    purchase_coefficient: data.purchase_coefficient ?? 2.0,
+    price_rounding:       data.price_rounding ?? 'none',
+    photo:                data.photo || '',
+    supplier_notes:       data.supplier_notes?.trim() || '',
+  });
+  if (pErr) sbErr(pErr);
 
-    // Gammes — toujours générer de nouveaux IDs pour éviter les conflits UNIQUE
+  try {
+    // 2. Gammes — toujours générer de nouveaux IDs
     const rangeIdMap = {};
-    for (let i = 0; i < data.ranges.length; i++) {
+    for (let i = 0; i < (data.ranges || []).length; i++) {
       const r = data.ranges[i];
       const newRangeId = generateId('range');
       rangeIdMap[r.id] = newRangeId;
-      db.prepare(`
-        INSERT INTO ranges (id, product_id, name, base_price, dimensions, sort_order)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(newRangeId, id, r.name.trim(), r.base_price, r.dimensions?.trim() || '', i);
+      const { error: rErr } = await sb.from('ranges').insert({
+        id: newRangeId, product_id: id,
+        name: r.name.trim(), base_price: r.base_price,
+        dimensions: r.dimensions?.trim() || '', sort_order: i,
+      });
+      if (rErr) throw new Error(rErr.message);
     }
 
-    // Modules
-    for (let i = 0; i < data.modules.length; i++) {
+    // 3. Modules + prix
+    for (let i = 0; i < (data.modules || []).length; i++) {
       const m = data.modules[i];
       const moduleId = generateId('mod');
-      db.prepare(`
-        INSERT INTO modules (id, product_id, name, description, dimensions, sort_order)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(moduleId, id, m.name.trim(), m.description?.trim() || '', m.dimensions?.trim() || '', i);
+      const { error: mErr } = await sb.from('modules').insert({
+        id: moduleId, product_id: id,
+        name: m.name.trim(), description: m.description?.trim() || '',
+        dimensions: m.dimensions?.trim() || '', sort_order: i,
+      });
+      if (mErr) throw new Error(mErr.message);
 
-      // Prix par gamme — utiliser le mapping pour les IDs de gammes
-      for (const [origRangeId, price] of Object.entries(m.prices || {})) {
-        const actualRangeId = rangeIdMap[origRangeId];
-        if (actualRangeId) {
-          db.prepare(`
-            INSERT INTO module_prices (module_id, range_id, price) VALUES (?, ?, ?)
-          `).run(moduleId, actualRangeId, price);
-        }
+      const priceRows = Object.entries(m.prices || {})
+        .filter(([origRangeId]) => rangeIdMap[origRangeId])
+        .map(([origRangeId, price]) => ({
+          module_id: moduleId,
+          range_id:  rangeIdMap[origRangeId],
+          price,
+        }));
+      if (priceRows.length > 0) {
+        const { error: mpErr } = await sb.from('module_prices').insert(priceRows);
+        if (mpErr) throw new Error(mpErr.message);
       }
     }
 
-    // Options
-    for (let i = 0; i < (data.options || []).length; i++) {
-      const o = data.options[i];
-      db.prepare(`
-        INSERT INTO options (id, product_id, name, description, price, type, coefficient, sort_order)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        generateId('opt'), id,
-        o.name.trim(), o.description?.trim() || '',
-        o.price, o.type || '', o.coefficient ?? null, i
-      );
+    // 4. Options
+    const optionRows = (data.options || []).map((o, i) => ({
+      id: generateId('opt'), product_id: id,
+      name: o.name.trim(), description: o.description?.trim() || '',
+      price: o.price, type: o.type || '',
+      coefficient: o.coefficient ?? null, sort_order: i,
+    }));
+    if (optionRows.length > 0) {
+      const { error: oErr } = await sb.from('options').insert(optionRows);
+      if (oErr) throw new Error(oErr.message);
     }
-  });
 
-  insert();
+  } catch (err) {
+    // Rollback manuel : supprimer le produit (CASCADE nettoie le reste)
+    await sb.from('products').delete().eq('id', id);
+    throw err;
+  }
+
   log('product', id, 'created', { name: data.name });
-
   return getById(id);
 }
 
 /**
  * Met à jour un produit (remplace gammes/modules/options)
  */
-function update(id, data) {
-  const existing = getById(id);
+async function update(id, data) {
+  const existing = await getById(id);
   if (!existing) throw new ValidationError(`Produit ${id} non trouvé`);
 
   validateProduct({ ...existing, ...data });
 
-  const db = getDb();
+  const sb = getSupabase();
 
-  const doUpdate = db.transaction(() => {
-    db.prepare(`
-      UPDATE products SET
-        name = ?, supplier_id = ?, collection = ?, description = ?,
-        valid_from = ?, valid_until = ?, purchase_coefficient = ?, price_rounding = ?,
-        photo = ?, supplier_notes = ?,
-        updated_at = datetime('now')
-      WHERE id = ?
-    `).run(
-      data.name?.trim() ?? existing.name,
-      data.supplier_id ?? existing.supplier_id,
-      data.collection?.trim() ?? existing.collection,
-      data.description?.trim() ?? existing.description,
-      data.valid_from ?? existing.valid_from,
-      data.valid_until ?? existing.valid_until,
-      data.purchase_coefficient ?? existing.purchase_coefficient ?? 2.0,
-      data.price_rounding ?? existing.price_rounding ?? 'none',
-      data.photo ?? existing.photo ?? '',
-      data.supplier_notes?.trim() ?? existing.supplier_notes ?? '',
-      id
-    );
+  // 1. Produit principal
+  const { error: pErr } = await sb.from('products').update({
+    name:                 data.name?.trim()             ?? existing.name,
+    supplier_id:          data.supplier_id              ?? existing.supplier_id,
+    collection:           data.collection?.trim()       ?? existing.collection,
+    description:          data.description?.trim()      ?? existing.description,
+    valid_from:           data.valid_from               ?? existing.valid_from,
+    valid_until:          data.valid_until              ?? existing.valid_until,
+    purchase_coefficient: data.purchase_coefficient     ?? existing.purchase_coefficient ?? 2.0,
+    price_rounding:       data.price_rounding           ?? existing.price_rounding ?? 'none',
+    photo:                data.photo                    ?? existing.photo ?? '',
+    supplier_notes:       data.supplier_notes?.trim()   ?? existing.supplier_notes ?? '',
+    updated_at:           new Date().toISOString(),
+  }).eq('id', id);
+  if (pErr) sbErr(pErr);
 
-    if (data.ranges) {
-      db.prepare('DELETE FROM ranges WHERE product_id = ?').run(id);
-      for (let i = 0; i < data.ranges.length; i++) {
-        const r = data.ranges[i];
-        db.prepare(`
-          INSERT INTO ranges (id, product_id, name, base_price, dimensions, sort_order)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).run(r.id || generateId('range'), id, r.name.trim(), r.base_price, r.dimensions?.trim() || '', i);
+  // 2. Gammes
+  if (data.ranges) {
+    await sb.from('ranges').delete().eq('product_id', id);
+    for (let i = 0; i < data.ranges.length; i++) {
+      const r = data.ranges[i];
+      const { error: rErr } = await sb.from('ranges').insert({
+        id: r.id || generateId('range'), product_id: id,
+        name: r.name.trim(), base_price: r.base_price,
+        dimensions: r.dimensions?.trim() || '', sort_order: i,
+      });
+      if (rErr) sbErr(rErr);
+    }
+  }
+
+  // 3. Modules + prix
+  if (data.modules) {
+    await sb.from('modules').delete().eq('product_id', id);
+    for (let i = 0; i < data.modules.length; i++) {
+      const m = data.modules[i];
+      const moduleId = m.id || generateId('mod');
+      const { error: mErr } = await sb.from('modules').insert({
+        id: moduleId, product_id: id,
+        name: m.name.trim(), description: m.description?.trim() || '',
+        dimensions: m.dimensions?.trim() || '', sort_order: i,
+      });
+      if (mErr) sbErr(mErr);
+
+      const priceRows = Object.entries(m.prices || {}).map(([rangeId, price]) => ({
+        module_id: moduleId, range_id: rangeId, price,
+      }));
+      if (priceRows.length > 0) {
+        const { error: mpErr } = await sb.from('module_prices').insert(priceRows);
+        if (mpErr) sbErr(mpErr);
       }
     }
+  }
 
-    if (data.modules) {
-      db.prepare('DELETE FROM modules WHERE product_id = ?').run(id);
-      for (let i = 0; i < data.modules.length; i++) {
-        const m = data.modules[i];
-        const moduleId = m.id || generateId('mod');
-        db.prepare(`
-          INSERT INTO modules (id, product_id, name, description, dimensions, sort_order)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).run(moduleId, id, m.name.trim(), m.description?.trim() || '', m.dimensions?.trim() || '', i);
-
-        for (const [rangeId, price] of Object.entries(m.prices || {})) {
-          db.prepare(`
-            INSERT INTO module_prices (module_id, range_id, price) VALUES (?, ?, ?)
-          `).run(moduleId, rangeId, price);
-        }
-      }
+  // 4. Options
+  if (data.options !== undefined) {
+    await sb.from('options').delete().eq('product_id', id);
+    const optionRows = data.options.map((o, i) => ({
+      id: o.id || generateId('opt'), product_id: id,
+      name: o.name.trim(), description: o.description?.trim() || '',
+      price: o.price, type: o.type || '',
+      coefficient: o.coefficient ?? null, sort_order: i,
+    }));
+    if (optionRows.length > 0) {
+      const { error: oErr } = await sb.from('options').insert(optionRows);
+      if (oErr) sbErr(oErr);
     }
+  }
 
-    if (data.options !== undefined) {
-      db.prepare('DELETE FROM options WHERE product_id = ?').run(id);
-      for (let i = 0; i < data.options.length; i++) {
-        const o = data.options[i];
-        db.prepare(`
-          INSERT INTO options (id, product_id, name, description, price, type, coefficient, sort_order)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(
-          o.id || generateId('opt'), id,
-          o.name.trim(), o.description?.trim() || '',
-          o.price, o.type || '', o.coefficient ?? null, i
-        );
-      }
-    }
-  });
-
-  doUpdate();
   log('product', id, 'updated');
-
   return getById(id);
 }
 
 /**
- * Archive un produit (soft delete — l'historique reste cohérent)
+ * Archive un produit (soft delete)
  */
-function archive(id) {
-  const db = getDb();
-  const existing = getById(id);
+async function archive(id) {
+  const sb = getSupabase();
+  const existing = await getById(id);
   if (!existing) throw new ValidationError(`Produit ${id} non trouvé`);
 
-  db.prepare(`
-    UPDATE products SET archived = 1, updated_at = datetime('now') WHERE id = ?
-  `).run(id);
-
+  const { error } = await sb.from('products')
+    .update({ archived: 1, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) sbErr(error);
   log('product', id, 'archived');
 }
 
 /**
  * Restaure un produit archivé
  */
-function restore(id) {
-  const db = getDb();
-  db.prepare(`
-    UPDATE products SET archived = 0, updated_at = datetime('now') WHERE id = ?
-  `).run(id);
+async function restore(id) {
+  const sb = getSupabase();
+  const { error } = await sb.from('products')
+    .update({ archived: 0, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) sbErr(error);
   log('product', id, 'restored');
 }
 
 /**
- * Active ou désactive un produit (visible dans le configurateur)
+ * Active ou désactive un produit
  */
-function setActive(id, active) {
-  const db = getDb();
-  db.prepare(`
-    UPDATE products SET active = ?, updated_at = datetime('now') WHERE id = ?
-  `).run(active ? 1 : 0, id);
+async function setActive(id, active) {
+  const sb = getSupabase();
+  const { error } = await sb.from('products')
+    .update({ active: active ? 1 : 0, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) sbErr(error);
   log('product', id, active ? 'activated' : 'deactivated');
 }
 
 /**
  * Duplique un produit
  */
-function duplicate(id) {
-  const original = getById(id);
+async function duplicate(id) {
+  const original = await getById(id);
   if (!original) throw new ValidationError(`Produit ${id} non trouvé`);
 
-  // Construire le mapping ancien ID → nouvel ID pour les gammes
   const rangeIdMap = {};
   const newRanges = original.ranges.map(r => {
     const newRangeId = generateId('range');
@@ -292,16 +302,14 @@ function duplicate(id) {
     return { ...r, id: newRangeId };
   });
 
-  const newId = generateId('prod');
   const newData = {
     ...original,
-    id: newId,
+    id: generateId('prod'),
     name: `${original.name} (copie)`,
     ranges: newRanges,
     modules: original.modules.map(m => ({
       ...m,
       id: generateId('mod'),
-      // Remappe les prix avec les nouveaux IDs de gammes
       prices: Object.fromEntries(
         Object.entries(m.prices || {}).map(([rId, price]) => [rangeIdMap[rId] ?? rId, price])
       ),
@@ -313,77 +321,48 @@ function duplicate(id) {
 }
 
 /**
- * Recherche produits (nom, collection, fournisseur)
+ * Recherche produits
  */
-function search(term) {
-  const db = getDb();
-  const like = `%${term}%`;
+async function search(term) {
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from('products')
+    .select(PRODUCT_SELECT)
+    .eq('archived', 0)
+    .or(`name.ilike.%${term}%,collection.ilike.%${term}%`)
+    .order('name');
 
-  const products = db.prepare(`
-    SELECT p.*, s.name as supplier_name
-    FROM products p
-    LEFT JOIN suppliers s ON p.supplier_id = s.id
-    WHERE p.archived = 0
-      AND (p.name LIKE ? OR p.collection LIKE ? OR s.name LIKE ?)
-    ORDER BY p.name
-  `).all(like, like, like);
-
-  return products.map(p => enrichProduct(p));
+  if (error) sbErr(error);
+  return data.map(normalizeProduct);
 }
 
 /**
- * Mise à jour des prix en masse pour un fournisseur/collection
- * @param {string|null} supplierId  — null = tous fournisseurs
- * @param {string}      collection  — chaîne de filtre (vide = toutes)
- * @param {number}      percent     — ex: 5 pour +5%, -3 pour -3%
+ * Mise à jour des prix en masse via RPC Postgres
  */
-function bulkUpdatePrices(supplierId, collection, percent) {
-  const db = getDb();
+async function bulkUpdatePrices(supplierId, collection, percent) {
   const factor = 1 + (parseFloat(percent) / 100);
   if (isNaN(factor) || factor <= 0) throw new Error('Pourcentage invalide');
 
-  let query = 'SELECT id FROM products WHERE archived = 0';
-  const params = [];
-  if (supplierId) { query += ' AND supplier_id = ?'; params.push(supplierId); }
-  if (collection && collection.trim()) {
-    query += ' AND collection LIKE ?';
-    params.push(`%${collection.trim()}%`);
-  }
-
-  const products = db.prepare(query).all(...params);
-  if (products.length === 0) return { products: 0, ranges: 0, modules: 0, options: 0 };
-
-  const doUpdate = db.transaction(() => {
-    let rangeCount = 0, moduleCount = 0, optionCount = 0;
-
-    for (const { id } of products) {
-      const r = db.prepare(
-        'UPDATE ranges SET base_price = ROUND(base_price * ?, 2) WHERE product_id = ?'
-      ).run(factor, id);
-      rangeCount += r.changes;
-
-      const modules = db.prepare('SELECT id FROM modules WHERE product_id = ?').all(id);
-      for (const mod of modules) {
-        const mp = db.prepare(
-          'UPDATE module_prices SET price = ROUND(price * ?, 2) WHERE module_id = ?'
-        ).run(factor, mod.id);
-        moduleCount += mp.changes;
-      }
-
-      const op = db.prepare(
-        'UPDATE options SET price = ROUND(price * ?, 2) WHERE product_id = ?'
-      ).run(factor, id);
-      optionCount += op.changes;
-
-      db.prepare("UPDATE products SET updated_at = datetime('now') WHERE id = ?").run(id);
-    }
-
-    return { products: products.length, ranges: rangeCount, modules: moduleCount, options: optionCount };
+  const sb = getSupabase();
+  const { data, error } = await sb.rpc('bulk_update_prices', {
+    p_supplier_id: supplierId || '',
+    p_collection:  collection?.trim() || '',
+    p_factor:      factor,
   });
 
-  const result = doUpdate();
-  log('product', 'bulk', 'prices-updated', { supplierId, collection, percent, ...result });
-  return result;
+  if (error) sbErr(error);
+  log('product', 'bulk', 'prices-updated', { supplierId, collection, percent, ...data });
+  return data;
 }
 
-module.exports = { getAll, getById, create, update, archive, restore, setActive, duplicate, search, bulkUpdatePrices };
+/**
+ * Suppression définitive d'un produit (CASCADE supprime gammes/modules/options)
+ */
+async function remove(id) {
+  const sb = getSupabase();
+  const { error } = await sb.from('products').delete().eq('id', id);
+  if (error) sbErr(error);
+  log('product', id, 'deleted');
+}
+
+module.exports = { getAll, getById, create, update, archive, restore, setActive, duplicate, search, bulkUpdatePrices, remove };

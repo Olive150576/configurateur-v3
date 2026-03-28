@@ -1,8 +1,8 @@
 /**
- * ClientService — CRUD clients
+ * ClientService — CRUD clients via Supabase
  */
 
-const { getDb } = require('../db/database');
+const { getSupabase } = require('../db/supabase');
 const { validateClient, ValidationError } = require('../utils/validator');
 const { log } = require('../utils/logger');
 
@@ -10,99 +10,111 @@ function generateId() {
   return `client_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 }
 
-function getAll() {
-  const db = getDb();
-  return db.prepare('SELECT * FROM clients ORDER BY name').all();
+function sbErr(error) {
+  throw new Error(error.message);
 }
 
-function getById(id) {
-  const db = getDb();
-  return db.prepare('SELECT * FROM clients WHERE id = ?').get(id);
+async function getAll() {
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from('clients')
+    .select('*')
+    .order('name');
+  if (error) sbErr(error);
+  return data;
 }
 
-function create(data) {
+async function getById(id) {
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from('clients')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    sbErr(error);
+  }
+  return data;
+}
+
+async function create(data) {
   validateClient(data);
-  const db = getDb();
+  const sb = getSupabase();
   const id = generateId();
 
-  db.prepare(`
-    INSERT INTO clients (id, name, email, phone, company, address, city, zip, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    id, data.name.trim(),
-    data.email?.trim() || '',
-    data.phone?.trim() || '',
-    data.company?.trim() || '',
-    data.address?.trim() || '',
-    data.city?.trim() || '',
-    data.zip?.trim() || '',
-    data.notes?.trim() || ''
-  );
+  const { error } = await sb.from('clients').insert({
+    id,
+    name:    data.name.trim(),
+    email:   data.email?.trim()   || '',
+    phone:   data.phone?.trim()   || '',
+    company: data.company?.trim() || '',
+    address: data.address?.trim() || '',
+    city:    data.city?.trim()    || '',
+    zip:     data.zip?.trim()     || '',
+    notes:   data.notes?.trim()   || '',
+  });
+  if (error) sbErr(error);
 
   log('client', id, 'created', { name: data.name });
   return getById(id);
 }
 
-function update(id, data) {
-  const existing = getById(id);
+async function update(id, data) {
+  const existing = await getById(id);
   if (!existing) throw new ValidationError(`Client ${id} non trouvé`);
 
   validateClient({ ...existing, ...data });
-  const db = getDb();
+  const sb = getSupabase();
 
-  db.prepare(`
-    UPDATE clients SET
-      name = ?, email = ?, phone = ?, company = ?,
-      address = ?, city = ?, zip = ?, notes = ?,
-      updated_at = datetime('now')
-    WHERE id = ?
-  `).run(
-    data.name?.trim() ?? existing.name,
-    data.email?.trim() ?? existing.email,
-    data.phone?.trim() ?? existing.phone,
-    data.company?.trim() ?? existing.company,
-    data.address?.trim() ?? existing.address,
-    data.city?.trim() ?? existing.city,
-    data.zip?.trim() ?? existing.zip,
-    data.notes?.trim() ?? existing.notes,
-    id
-  );
+  const { error } = await sb.from('clients').update({
+    name:       data.name?.trim()    ?? existing.name,
+    email:      data.email?.trim()   ?? existing.email,
+    phone:      data.phone?.trim()   ?? existing.phone,
+    company:    data.company?.trim() ?? existing.company,
+    address:    data.address?.trim() ?? existing.address,
+    city:       data.city?.trim()    ?? existing.city,
+    zip:        data.zip?.trim()     ?? existing.zip,
+    notes:      data.notes?.trim()   ?? existing.notes,
+    updated_at: new Date().toISOString(),
+  }).eq('id', id);
+  if (error) sbErr(error);
 
   log('client', id, 'updated');
   return getById(id);
 }
 
-function search(term) {
-  const db = getDb();
-  const like = `%${term}%`;
-  return db.prepare(`
-    SELECT * FROM clients
-    WHERE name LIKE ? OR email LIKE ? OR company LIKE ? OR phone LIKE ?
-    ORDER BY name
-  `).all(like, like, like, like);
+async function search(term) {
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from('clients')
+    .select('*')
+    .or(`name.ilike.%${term}%,email.ilike.%${term}%,company.ilike.%${term}%,phone.ilike.%${term}%`)
+    .order('name');
+  if (error) sbErr(error);
+  return data;
 }
 
 /**
- * Exporte tous les clients au format CSV (retourne la chaîne CSV)
+ * Exporte tous les clients au format CSV
  */
-function exportCSV() {
-  const clients = getAll();
-  const headers = ['name','company','email','phone','address','city','zip','notes'];
-  const escape  = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const rows    = clients.map(c => headers.map(h => escape(c[h])).join(','));
+async function exportCSV() {
+  const clients = await getAll();
+  const headers = ['name', 'company', 'email', 'phone', 'address', 'city', 'zip', 'notes'];
+  const escape = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const rows = clients.map(c => headers.map(h => escape(c[h])).join(','));
   return [headers.join(','), ...rows].join('\r\n');
 }
 
 /**
  * Importe des clients depuis un tableau de lignes CSV parsées
- * @param {Array<Object>} rows - tableau d'objets avec les champs clients
  */
-function importCSV(rows) {
+async function importCSV(rows) {
   let imported = 0;
   const errors = [];
   for (const row of rows) {
     try {
-      create(row);
+      await create(row);
       imported++;
     } catch (e) {
       errors.push(`${row.name ?? '?'}: ${e.message}`);

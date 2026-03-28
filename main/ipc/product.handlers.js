@@ -21,6 +21,7 @@ function register(ipcMain) {
   ipcMain.handle('products:bulkUpdatePrices', (_, supplierId, collection, pct) =>
     wrap(() => ProductService.bulkUpdatePrices(supplierId, collection, pct))
   );
+  ipcMain.handle('products:remove', (_, id) => wrap(() => ProductService.remove(id)));
 
   ipcMain.handle('products:generateQR', (_, text) =>
     wrap(() => QRCode.toDataURL(text, {

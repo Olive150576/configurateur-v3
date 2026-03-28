@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('api', {
     bulkUpdatePrices: (supplierId, collection, pct) =>
       ipcRenderer.invoke('products:bulkUpdatePrices', supplierId, collection, pct),
     generateQR: (text) => ipcRenderer.invoke('products:generateQR', text),
+    remove:    (id)            => ipcRenderer.invoke('products:remove', id),
   },
 
   // ==================== FOURNISSEURS ====================

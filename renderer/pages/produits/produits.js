@@ -144,6 +144,7 @@ function setupSubModals() {
     const btn = e.target.closest('button[data-action]');
     if (!btn) return;
     if (btn.dataset.action === 'restore') restoreProduct(btn.dataset.id);
+    if (btn.dataset.action === 'delete')  confirmDelete(btn.dataset.id, btn.dataset.name);
   });
 
   // Event delegation — ranges list
@@ -190,15 +191,30 @@ function setupPhotoUpload() {
   input.addEventListener('change', () => {
     const file = input.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      Utils.toast('Image trop volumineuse (max 2 Mo)', 'error');
+    if (file.size > 10 * 1024 * 1024) {
+      Utils.toast('Image trop volumineuse (max 10 Mo)', 'error');
       input.value = '';
       return;
     }
     const reader = new FileReader();
     reader.onload = e => {
-      state.editingPhoto = e.target.result;
-      showPhotoPreview(e.target.result);
+      const original = e.target.result;
+      const image = new Image();
+      image.onload = () => {
+        const MAX = 800;
+        let w = image.width, h = image.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else       { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(image, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/webp', 0.85);
+        state.editingPhoto = dataUrl;
+        showPhotoPreview(dataUrl);
+      };
+      image.src = original;
     };
     reader.readAsDataURL(file);
     input.value = '';
@@ -280,6 +296,7 @@ async function loadArchivedProducts() {
       <td style="text-align:right">
         <div class="flex gap-2" style="justify-content:flex-end">
           <button class="btn btn-ghost btn-sm" data-action="restore" data-id="${p.id}">Restaurer</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--color-danger)" data-action="delete" data-id="${p.id}" data-name="${Utils.escapeHtml(p.name)}">Supprimer</button>
         </div>
       </td>
     </tr>
@@ -583,6 +600,19 @@ async function duplicateProduct(productId) {
 }
 
 // ==================== ARCHIVAGE ====================
+
+function confirmDelete(productId, productName) {
+  openConfirm(
+    'Supprimer définitivement',
+    `Supprimer "${productName}" de façon permanente ? Cette action est irréversible.`,
+    async () => {
+      const res = await window.api.products.remove(productId);
+      if (!res.ok) { Utils.toast(res.error, 'error'); return; }
+      Utils.toast('Produit supprimé', 'success');
+      await loadArchivedProducts();
+    }
+  );
+}
 
 function confirmArchive(productId, productName) {
   openConfirm(

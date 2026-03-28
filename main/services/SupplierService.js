@@ -1,132 +1,123 @@
 /**
- * SupplierService — Gestion des fournisseurs
+ * SupplierService — Gestion des fournisseurs via Supabase
  */
 
-const { getDb } = require('../db/database');
+const { getSupabase } = require('../db/supabase');
 const { log } = require('../utils/logger');
 
 function generateId() {
   return `sup_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 }
 
-const FIELDS = [
-  'name', 'address', 'city', 'zip', 'phone', 'email',
-  'contact', 'contact_phone', 'contact_email',
-  'commercial_name', 'commercial_phone', 'commercial_email',
-  'sav_name', 'sav_phone', 'sav_email',
-];
-
-function getAll() {
-  const db = getDb();
-  return db.prepare('SELECT * FROM suppliers WHERE active = 1 ORDER BY name').all();
+function sbErr(error) {
+  throw new Error(error.message);
 }
 
-function getById(id) {
-  const db = getDb();
-  return db.prepare('SELECT * FROM suppliers WHERE id = ?').get(id);
+const FIELDS = {
+  name: '', address: '', city: '', zip: '', phone: '', email: '',
+  contact: '', contact_phone: '', contact_email: '',
+  commercial_name: '', commercial_phone: '', commercial_email: '',
+  sav_name: '', sav_phone: '', sav_email: '',
+};
+
+function normalize(data) {
+  const row = {};
+  for (const [key, def] of Object.entries(FIELDS)) {
+    row[key] = data[key]?.trim() ?? def;
+  }
+  return row;
 }
 
-function findByName(name) {
-  const db = getDb();
-  return db.prepare('SELECT * FROM suppliers WHERE name = ? COLLATE NOCASE').get(name);
+async function getAll() {
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from('suppliers')
+    .select('*')
+    .eq('active', 1)
+    .order('name');
+  if (error) sbErr(error);
+  return data;
+}
+
+async function getById(id) {
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from('suppliers')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    sbErr(error);
+  }
+  return data;
+}
+
+async function findByName(name) {
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from('suppliers')
+    .select('*')
+    .ilike('name', name)
+    .maybeSingle();
+  if (error) sbErr(error);
+  return data;
 }
 
 /**
  * Trouve ou crée un fournisseur par nom.
- * Utilisé par ProductService pour simplifier la saisie.
  */
-function findOrCreate(name) {
+async function findOrCreate(name) {
   if (!name?.trim()) return null;
-  const existing = findByName(name.trim());
+  const existing = await findByName(name.trim());
   if (existing) return existing;
 
-  const db = getDb();
+  const sb = getSupabase();
   const id = generateId();
-  db.prepare('INSERT INTO suppliers (id, name) VALUES (?, ?)').run(id, name.trim());
+  const { error } = await sb.from('suppliers').insert({ id, name: name.trim() });
+  if (error) sbErr(error);
   log('supplier', id, 'created', { name });
   return getById(id);
 }
 
-function create(data) {
+async function create(data) {
   if (!data.name?.trim()) throw new Error('Nom fournisseur obligatoire');
-  const db = getDb();
+  const sb = getSupabase();
   const id = generateId();
-  db.prepare(`
-    INSERT INTO suppliers (
-      id, name, address, city, zip, phone, email,
-      contact, contact_phone, contact_email,
-      commercial_name, commercial_phone, commercial_email,
-      sav_name, sav_phone, sav_email
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    id,
-    data.name?.trim()             || '',
-    data.address?.trim()          || '',
-    data.city?.trim()             || '',
-    data.zip?.trim()              || '',
-    data.phone?.trim()            || '',
-    data.email?.trim()            || '',
-    data.contact?.trim()          || '',
-    data.contact_phone?.trim()    || '',
-    data.contact_email?.trim()    || '',
-    data.commercial_name?.trim()  || '',
-    data.commercial_phone?.trim() || '',
-    data.commercial_email?.trim() || '',
-    data.sav_name?.trim()         || '',
-    data.sav_phone?.trim()        || '',
-    data.sav_email?.trim()        || '',
-  );
+  const { error } = await sb.from('suppliers').insert({ id, ...normalize(data) });
+  if (error) sbErr(error);
   log('supplier', id, 'created', { name: data.name });
   return getById(id);
 }
 
-function update(id, data) {
-  const db = getDb();
-  db.prepare(`
-    UPDATE suppliers SET
-      name = ?, address = ?, city = ?, zip = ?,
-      phone = ?, email = ?,
-      contact = ?, contact_phone = ?, contact_email = ?,
-      commercial_name = ?, commercial_phone = ?, commercial_email = ?,
-      sav_name = ?, sav_phone = ?, sav_email = ?,
-      updated_at = datetime('now')
-    WHERE id = ?
-  `).run(
-    data.name?.trim()             || '',
-    data.address?.trim()          || '',
-    data.city?.trim()             || '',
-    data.zip?.trim()              || '',
-    data.phone?.trim()            || '',
-    data.email?.trim()            || '',
-    data.contact?.trim()          || '',
-    data.contact_phone?.trim()    || '',
-    data.contact_email?.trim()    || '',
-    data.commercial_name?.trim()  || '',
-    data.commercial_phone?.trim() || '',
-    data.commercial_email?.trim() || '',
-    data.sav_name?.trim()         || '',
-    data.sav_phone?.trim()        || '',
-    data.sav_email?.trim()        || '',
-    id,
-  );
+async function update(id, data) {
+  const sb = getSupabase();
+  const { error } = await sb.from('suppliers')
+    .update({ ...normalize(data), updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) sbErr(error);
   log('supplier', id, 'updated');
   return getById(id);
 }
 
-function search(term) {
-  const db = getDb();
-  const like = `%${term}%`;
-  return db.prepare(`
-    SELECT * FROM suppliers
-    WHERE active = 1
-      AND (name LIKE ? OR contact LIKE ? OR commercial_name LIKE ? OR email LIKE ? OR phone LIKE ?)
-    ORDER BY name
-  `).all(like, like, like, like, like);
+async function search(term) {
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from('suppliers')
+    .select('*')
+    .eq('active', 1)
+    .or(`name.ilike.%${term}%,contact.ilike.%${term}%,commercial_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`)
+    .order('name');
+  if (error) sbErr(error);
+  return data;
 }
 
-function archive(id) {
-  const db = getDb();
-  db.prepare(`UPDATE suppliers SET active=0, updated_at=datetime('now') WHERE id=?`).run(id);
+async function archive(id) {
+  const sb = getSupabase();
+  const { error } = await sb.from('suppliers')
+    .update({ active: 0, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) sbErr(error);
   log('supplier', id, 'archived');
 }
 
