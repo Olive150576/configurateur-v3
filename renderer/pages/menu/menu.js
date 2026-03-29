@@ -24,6 +24,14 @@ async function loadDashboard() {
   document.getElementById('kpi-orders').textContent        = d.activeOrders;
   document.getElementById('kpi-drafts').textContent        = d.drafts;
 
+  // Section relances
+  renderOverdueList(d.overdueList || [], d.alertDays || 15);
+
+  // Notification toast au démarrage si relances en retard
+  if (d.overdueQuotes > 0) {
+    showOverdueNotif(d.overdueQuotes, d.alertDays || 15);
+  }
+
   // Activité récente
   const tbody = document.getElementById('recent-docs');
   if (!d.recentDocs.length) {
@@ -154,3 +162,64 @@ checkAutoBackupNotif();
   }
   setupAutoUpdater();
 })();
+
+// ==================== RELANCES ====================
+
+function renderOverdueList(list, alertDays) {
+  const section = document.getElementById('overdue-section');
+  const tbody   = document.getElementById('overdue-list');
+  if (!section || !tbody) return;
+
+  if (!list.length) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  document.getElementById('overdue-title').textContent =
+    `⚠️ ${list.length} devis à relancer (sans réponse depuis +${alertDays} jours)`;
+
+  tbody.innerHTML = list.map(doc => `
+    <tr style="cursor:pointer" onclick="window.location.href='../documents/index.html'">
+      <td>
+        ${doc.number
+          ? `<span class="doc-num">${esc(doc.number)}</span>`
+          : `<span class="doc-draft">Brouillon</span>`}
+      </td>
+      <td><span class="doc-client">${doc.client_name ? esc(doc.client_name) : '<em style="color:#94a3b8">—</em>'}</span></td>
+      <td><span class="badge badge-gray">${TYPE_LABELS[doc.type] ?? doc.type}</span></td>
+      <td class="doc-amount">${formatPrice(doc.total)}</td>
+      <td>
+        <span style="color:${doc.days_waiting > 30 ? 'var(--color-error)' : 'var(--color-warning)'}; font-weight:600">
+          ${doc.days_waiting} j
+        </span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function showOverdueNotif(count, alertDays) {
+  const notif = document.createElement('div');
+  notif.style.cssText = [
+    'position:fixed', 'bottom:20px', 'right:20px',
+    'background:#fff7ed', 'border:1px solid #fdba74',
+    'border-radius:8px', 'padding:12px 18px',
+    'font-size:13px', 'color:#9a3412', 'z-index:9999',
+    'display:flex', 'align-items:center', 'gap:10px',
+    'box-shadow:0 2px 12px rgba(0,0,0,.12)', 'max-width:320px',
+    'cursor:pointer'
+  ].join(';');
+  notif.innerHTML = `
+    <span style="font-size:20px">⚠️</span>
+    <div>
+      <div style="font-weight:600">${count} devis sans réponse</div>
+      <div style="font-size:11px;margin-top:2px;opacity:.8">Sans nouvelles depuis +${alertDays} jours — voir les relances</div>
+    </div>
+  `;
+  notif.addEventListener('click', () => {
+    notif.remove();
+    document.getElementById('overdue-section')?.scrollIntoView({ behavior: 'smooth' });
+  });
+  document.body.appendChild(notif);
+  setTimeout(() => notif?.remove(), 8000);
+}

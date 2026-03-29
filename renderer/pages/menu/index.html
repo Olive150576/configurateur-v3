@@ -183,6 +183,26 @@
       </div>
     </div>
 
+    <!-- Section relances (masquée si aucun retard) -->
+    <div id="overdue-section" style="display:none;margin-bottom:20px;border-radius:10px;border:1px solid #fdba74;background:#fff7ed;overflow:hidden">
+      <div style="padding:12px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #fed7aa">
+        <span id="overdue-title" style="font-weight:600;color:#9a3412;font-size:14px"></span>
+        <a href="../documents/index.html" style="font-size:12px;color:#ea580c;text-decoration:none;font-weight:500">Voir les documents →</a>
+      </div>
+      <table class="doc-table" style="margin:0">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th>Client</th>
+            <th>Type</th>
+            <th>Montant</th>
+            <th>Attente</th>
+          </tr>
+        </thead>
+        <tbody id="overdue-list"></tbody>
+      </table>
+    </div>
+
     <!-- Body : activité + clients -->
     <div class="body-grid">
 

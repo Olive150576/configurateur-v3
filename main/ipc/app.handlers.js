@@ -140,8 +140,21 @@ function register(ipcMain) {
       SELECT id, name, company, email, created_at FROM clients ORDER BY created_at DESC LIMIT 5
     `).all();
 
+    // Liste détaillée des devis en retard de relance
+    const overdueList = db.prepare(`
+      SELECT d.id, d.number, d.type, d.status, d.total, d.validated_at,
+             c.name as client_name,
+             CAST(julianday('now') - julianday(d.validated_at) AS INTEGER) as days_waiting
+      FROM documents d
+      LEFT JOIN clients c ON d.client_id = c.id
+      WHERE d.type IN ('devis','offre') AND d.status IN ('validated','sent')
+        AND d.validated_at <= datetime('now', '-' || ? || ' days')
+      ORDER BY d.validated_at ASC
+    `).all(String(alertDays));
+
     return { products, clients, documents, drafts, pendingQuotes, activeOrders,
-             revenueMonth, revenueTotal, overdueQuotes, recentDocs, recentClients };
+             revenueMonth, revenueTotal, overdueQuotes, overdueList, alertDays,
+             recentDocs, recentClients };
   }));
 }
 
