@@ -25,12 +25,15 @@ function register(ipcMain) {
   ipcMain.handle('products:remove', (_, id) => wrap(() => ProductService.remove(id)));
 
   // ── Publication vers le site mildecor.fr ─────────────────────────────────
-  ipcMain.handle('products:publishToWeb', (_, id, webSettings, webpArray) =>
+  ipcMain.handle('products:publishToWeb', (_, id, webSettings, webpArrays) =>
     wrap(async () => {
-      const product    = await ProductService.getById(id);
+      const product = await ProductService.getById(id);
       if (!product) throw new Error(`Produit ${id} introuvable`);
-      const webpBuffer = webpArray ? new Uint8Array(webpArray) : null;
-      return WebPublishService.publish(product, webSettings, webpBuffer);
+      // webpArrays : tableau de tableaux (un buffer par photo)
+      const buffers = Array.isArray(webpArrays)
+        ? webpArrays.map(a => Buffer.from(new Uint8Array(a)))
+        : [];
+      return WebPublishService.publish(product, webSettings, buffers);
     })
   );
 

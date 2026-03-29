@@ -19,7 +19,7 @@ function sbErr(error) {
  * vers le format attendu par le renderer.
  */
 function normalizeProduct(p) {
-  const { suppliers, ranges, modules, options, ...product } = p;
+  const { suppliers, ranges, modules, options, product_photos, ...product } = p;
 
   return {
     ...product,
@@ -35,6 +35,9 @@ function normalizeProduct(p) {
         };
       }),
     options: (options || []).sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name)),
+    photos: (product_photos || [])
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map(pp => ({ id: pp.id, photo: pp.photo, sort_order: pp.sort_order })),
   };
 }
 
@@ -43,7 +46,8 @@ const PRODUCT_SELECT = `
   suppliers(name),
   ranges(*),
   modules(*, module_prices(*)),
-  options(*)
+  options(*),
+  product_photos(*)
 `;
 
 /**
@@ -156,6 +160,16 @@ async function create(data) {
       if (oErr) throw new Error(oErr.message);
     }
 
+    // 5. Photos
+    const photoRows = (data.photos || []).map((p, i) => ({
+      id: generateId('photo'), product_id: id,
+      photo: p.photo || p, sort_order: i,
+    }));
+    if (photoRows.length > 0) {
+      const { error: phErr } = await sb.from('product_photos').insert(photoRows);
+      if (phErr) throw new Error(phErr.message);
+    }
+
   } catch (err) {
     // Rollback manuel : supprimer le produit (CASCADE nettoie le reste)
     await sb.from('products').delete().eq('id', id);
@@ -245,6 +259,19 @@ async function update(id, data) {
     }
   }
 
+  // 5. Photos
+  if (data.photos !== undefined) {
+    await sb.from('product_photos').delete().eq('product_id', id);
+    const photoRows = data.photos.map((p, i) => ({
+      id: p.id || generateId('photo'), product_id: id,
+      photo: p.photo || p, sort_order: i,
+    }));
+    if (photoRows.length > 0) {
+      const { error: phErr } = await sb.from('product_photos').insert(photoRows);
+      if (phErr) sbErr(phErr);
+    }
+  }
+
   log('product', id, 'updated');
   return getById(id);
 }
@@ -315,6 +342,7 @@ async function duplicate(id) {
       ),
     })),
     options: original.options.map(o => ({ ...o, id: generateId('opt') })),
+    photos: (original.photos || []).map(p => ({ id: null, photo: p.photo })),
   };
 
   return create(newData);

@@ -39,7 +39,14 @@ async function uploadPhoto(webpBuffer) {
 }
 
 // ── Transformation Electron → site ───────────────────────────────────────────
-function buildSiteProduct(product, webSettings, imageUrl) {
+// ── Upload plusieurs photos WebP vers Storage ─────────────────────────────────
+async function uploadPhotos(buffers) {
+  return Promise.all(buffers.map(buf => uploadPhoto(buf)));
+}
+
+function buildSiteProduct(product, webSettings, imageUrls) {
+  const imageUrl = (imageUrls && imageUrls.length > 0) ? imageUrls[0] : null;
+
   // Modules : { name, dims }
   const modules = (product.modules || []).map(m => ({
     name: m.name.trim(),
@@ -68,7 +75,7 @@ function buildSiteProduct(product, webSettings, imageUrl) {
     materials,
     featured:         !!webSettings.featured,
     image:            imageUrl || null,
-    images:           imageUrl ? [imageUrl] : [],
+    images:           imageUrls && imageUrls.length > 0 ? imageUrls : [],
     modules,
     options,
     order:            0,
@@ -89,29 +96,28 @@ async function findSiteProduct(name, category) {
 
 // ── Point d'entrée principal ──────────────────────────────────────────────────
 /**
- * @param {object}     product      - Produit normalisé (depuis ProductService.getById)
- * @param {object}     webSettings  - { category, subcat, description, composition,
- *                                     badge, materials, featured }
- * @param {Uint8Array|null} webpBuffer - Buffer WebP de la photo (null si pas de photo)
- * @returns {object}   { id, url }  - ID du produit sur le site + URL publique
+ * @param {object}   product     - Produit normalisé (depuis ProductService.getById)
+ * @param {object}   webSettings - { category, subcat, description, composition, badge, materials, featured }
+ * @param {Buffer[]} buffers     - Tableau de buffers WebP (un par photo)
+ * @returns {object} { id, url } - ID du produit sur le site + URL publique
  */
-async function publish(product, webSettings, webpBuffer) {
+async function publish(product, webSettings, buffers) {
   const sb = getSite();
 
-  // 1. Upload photo si fournie
-  let imageUrl = null;
-  if (webpBuffer && webpBuffer.length > 0) {
-    imageUrl = await uploadPhoto(Buffer.from(webpBuffer));
+  // 1. Upload toutes les photos si fournies
+  let imageUrls = [];
+  if (buffers && buffers.length > 0) {
+    imageUrls = await uploadPhotos(buffers);
   }
 
   // 2. Chercher si ce produit existe déjà sur le site
   const existing = await findSiteProduct(product.name, webSettings.category);
 
   // 3. Construire l'objet site
-  const siteProduct = buildSiteProduct(product, webSettings, imageUrl);
+  const siteProduct = buildSiteProduct(product, webSettings, imageUrls);
 
-  // Si pas de nouvelle photo mais déjà une sur le site → la conserver
-  if (!imageUrl && existing) {
+  // Si pas de nouvelles photos mais déjà des photos sur le site → les conserver
+  if (imageUrls.length === 0 && existing) {
     siteProduct.image  = existing.image;
     siteProduct.images = existing.images || [];
   }

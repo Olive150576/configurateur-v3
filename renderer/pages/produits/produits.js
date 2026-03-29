@@ -16,7 +16,7 @@ let state = {
   editingRangeIdx:  null,
   editingModuleIdx: null,
   editingOptionIdx: null,
-  editingPhoto:     null,        // data URL ou '' pour supprimer
+  editingPhotos:    [],          // [{ id, photo: dataUrl }]
   confirmCallback:  null,
   currentView:    'list',
 };
@@ -189,20 +189,33 @@ function setupImportExport() {
 
 function setupPhotoUpload() {
   const input = document.getElementById('f-photo');
-  input.addEventListener('change', () => {
-    const file = input.files[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      Utils.toast('Image trop volumineuse (max 10 Mo)', 'error');
-      input.value = '';
-      return;
+  input.addEventListener('change', async () => {
+    const files = Array.from(input.files);
+    if (!files.length) return;
+    for (const file of files) {
+      if (file.size > 10 * 1024 * 1024) {
+        Utils.toast(`"${file.name}" trop volumineux (max 10 Mo)`, 'error');
+        continue;
+      }
+      if (state.editingPhotos.length >= 8) {
+        Utils.toast('Maximum 8 photos par produit', 'warning');
+        break;
+      }
+      const dataUrl = await fileToWebpDataUrl(file);
+      state.editingPhotos.push({ id: null, photo: dataUrl });
     }
+    input.value = '';
+    renderPhotosGrid();
+  });
+}
+
+async function fileToWebpDataUrl(file) {
+  return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = e => {
-      const original = e.target.result;
       const image = new Image();
       image.onload = () => {
-        const MAX = 800;
+        const MAX = 1200;
         let w = image.width, h = image.height;
         if (w > MAX || h > MAX) {
           if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -211,18 +224,33 @@ function setupPhotoUpload() {
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(image, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL('image/webp', 0.85);
-        state.editingPhoto = dataUrl;
-        showPhotoPreview(dataUrl);
+        resolve(canvas.toDataURL('image/webp', 0.85));
       };
-      image.src = original;
+      image.src = e.target.result;
     };
     reader.readAsDataURL(file);
-    input.value = '';
   });
-  document.getElementById('btn-delete-photo').addEventListener('click', () => {
-    state.editingPhoto = '';
-    document.getElementById('photo-preview-wrap').style.display = 'none';
+}
+
+function renderPhotosGrid() {
+  const grid = document.getElementById('photos-grid');
+  if (!grid) return;
+  if (state.editingPhotos.length === 0) {
+    grid.innerHTML = '<span style="color:var(--color-muted);font-size:12px;line-height:36px">Aucune photo</span>';
+    return;
+  }
+  grid.innerHTML = state.editingPhotos.map((p, idx) => `
+    <div style="position:relative;width:80px;height:80px;border-radius:6px;border:2px solid ${idx === 0 ? 'var(--color-primary)' : 'var(--color-border)'};overflow:hidden;flex-shrink:0">
+      <img src="${p.photo}" style="width:100%;height:100%;object-fit:cover">
+      ${idx === 0 ? '<span style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.55);color:#fbbf24;font-size:9px;text-align:center;padding:2px 0;line-height:14px">★ principale</span>' : ''}
+      <button data-photo-idx="${idx}" class="btn-photo-del" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:3px;width:20px;height:20px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;padding:0;line-height:1">×</button>
+    </div>
+  `).join('');
+  grid.querySelectorAll('.btn-photo-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.editingPhotos.splice(parseInt(btn.dataset.photoIdx), 1);
+      renderPhotosGrid();
+    });
   });
 }
 
@@ -362,8 +390,8 @@ function renderProductsTable(products) {
         </label>
       </td>
       <td style="padding:4px 6px">
-        ${product.photo
-          ? `<img src="${product.photo}" style="width:36px;height:36px;object-fit:cover;border-radius:4px;border:1px solid var(--color-border)">`
+        ${(product.photos?.[0]?.photo || product.photo)
+          ? `<img src="${product.photos?.[0]?.photo || product.photo}" style="width:36px;height:36px;object-fit:cover;border-radius:4px;border:1px solid var(--color-border)">`
           : '<div style="width:36px;height:36px;background:#f1f5f9;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:16px">📦</div>'}
       </td>
       <td>
@@ -441,13 +469,15 @@ function openProductModal(product = null) {
   document.getElementById('f-supplier-notes').value  = product?.supplier_notes  ?? '';
   document.getElementById('f-coefficient').value     = product?.purchase_coefficient ?? 2.0;
 
-  // Photo
-  state.editingPhoto = product?.photo ?? '';
-  if (state.editingPhoto) {
-    showPhotoPreview(state.editingPhoto);
-  } else {
-    document.getElementById('photo-preview-wrap').style.display = 'none';
+  // Photos
+  state.editingPhotos = [];
+  if (product?.photos?.length > 0) {
+    state.editingPhotos = product.photos.map(p => ({ id: p.id, photo: p.photo }));
+  } else if (product?.photo) {
+    // Rétrocompatibilité : produit avec une seule photo (ancienne version)
+    state.editingPhotos = [{ id: null, photo: product.photo }];
   }
+  renderPhotosGrid();
   const rounding = product?.price_rounding ?? 'none';
   document.querySelectorAll('input[name="price-rounding"]').forEach(radio => {
     radio.checked = radio.value === rounding;
@@ -536,7 +566,8 @@ async function handleSaveProduct() {
     price_rounding,
     valid_from:  validFrom,
     valid_until: validUntil,
-    photo:   state.editingPhoto ?? '',
+    photo:   state.editingPhotos[0]?.photo ?? '',   // rétrocompatibilité
+    photos:  state.editingPhotos,
     ranges:  state.editingRanges,
     modules: state.editingModules,
     options: state.editingOptions,
@@ -1118,13 +1149,6 @@ async function handleExportJson() {
   Utils.toast('Export téléchargé', 'success');
 }
 
-// ==================== PHOTO ====================
-
-function showPhotoPreview(dataUrl) {
-  document.getElementById('photo-preview').src = dataUrl;
-  document.getElementById('photo-preview-wrap').style.display = 'block';
-}
-
 // ==================== IMPORT CSV FOURNISSEUR ====================
 
 function downloadCsvTemplate() {
@@ -1443,11 +1467,20 @@ async function openPublishModal(product) {
   document.getElementById('pub-featured').checked = false;
   document.getElementById('err-pub-category').style.display = 'none';
 
-  // Aperçu photo
+  // Aperçu photos
   const preview = document.getElementById('pub-photo-preview');
-  if (product.photo) {
-    preview.innerHTML = `<img src="${product.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:5px">`;
+  const allPhotos = product.photos?.length > 0
+    ? product.photos
+    : (product.photo ? [{ photo: product.photo }] : []);
+  if (allPhotos.length > 0) {
+    preview.style.cssText = 'width:100%;height:140px;border-radius:6px;border:1px solid var(--color-border);display:flex;gap:4px;padding:4px;overflow:hidden;background:var(--color-bg-alt)';
+    preview.innerHTML = allPhotos.slice(0, 4).map(p =>
+      `<img src="${p.photo}" style="flex:1;min-width:0;height:100%;object-fit:cover;border-radius:4px">`
+    ).join('') + (allPhotos.length > 4
+      ? `<div style="flex-shrink:0;display:flex;align-items:center;padding:0 8px;color:var(--color-muted);font-size:13px">+${allPhotos.length - 4}</div>`
+      : '');
   } else {
+    preview.style.cssText = 'width:100%;height:140px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg-alt);display:flex;align-items:center;justify-content:center;color:var(--color-muted);font-size:13px';
     preview.textContent = 'Aucune photo sur ce produit';
   }
 
@@ -1492,11 +1525,15 @@ async function handlePublish() {
   document.getElementById('btn-publish-label').textContent = 'Publication en cours…';
 
   try {
-    // Conversion WebP de la photo si disponible
-    let webpArray = null;
-    if (product.photo) {
-      const buffer = await convertToWebP(product.photo);
-      webpArray = Array.from(buffer); // IPC ne transmet pas Uint8Array directement
+    // Conversion WebP de toutes les photos disponibles
+    const allPhotos = product.photos?.length > 0
+      ? product.photos
+      : (product.photo ? [{ photo: product.photo }] : []);
+
+    const webpArrays = [];
+    for (const p of allPhotos) {
+      const buffer = await convertToWebP(p.photo);
+      webpArrays.push(Array.from(buffer)); // IPC ne transmet pas Uint8Array directement
     }
 
     const webSettings = {
@@ -1509,7 +1546,7 @@ async function handlePublish() {
       featured:    document.getElementById('pub-featured').checked,
     };
 
-    const res = await window.api.products.publishToWeb(product.id, webSettings, webpArray);
+    const res = await window.api.products.publishToWeb(product.id, webSettings, webpArrays);
 
     if (!res.ok) throw new Error(res.error || 'Erreur inconnue');
 
