@@ -13,7 +13,7 @@ const { log } = require('../utils/logger');
 
 // ── Credentials du site mildecor.fr ──────────────────────────────────────────
 const SITE_URL    = 'https://grtsnlsoohgeykvtwwrj.supabase.co';
-const SITE_KEY    = 'sb_publishable_RA_dJH34UN7pPDXCjj_SXw_zPn7D_0M';
+const SITE_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdydHNubHNvb2hnZXlrdnR3d3JqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDU4NTExNywiZXhwIjoyMDkwMTYxMTE3fQ.RAytr6kykSiqwHFxb7cROe4mWLwpHwYsXxktsl1l3Ao';
 const SITE_BUCKET = 'images';
 
 let _client = null;
