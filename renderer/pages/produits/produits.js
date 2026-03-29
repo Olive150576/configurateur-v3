@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupPhotoUpload();
   setupBulkUpdate();
   setupCatalogue();
+  setupWebPublish();
   await loadProducts();
   await loadSuppliers();
 });
@@ -457,6 +458,9 @@ function openProductModal(product = null) {
 
   document.getElementById('modal-product-title').textContent =
     product ? `Éditer : ${product.name}` : 'Nouveau produit';
+
+  // Bouton "Publier sur le site" — visible seulement en mode édition
+  document.getElementById('btn-open-publish').style.display = product ? 'inline-flex' : 'none';
 
   hideAllErrors();
   document.getElementById('modal-error').style.display = 'none';
@@ -1377,4 +1381,164 @@ async function applyBulkUpdate() {
 
   Utils.toast(`Tarifs mis à jour : ${sign}${pct}% sur ${d.products} produit(s)`, 'success');
   await loadProducts(); // Recharge la liste pour refléter les changements
+}
+
+// ==================== PUBLICATION SITE WEB ====================
+
+/**
+ * Convertit un data-URL image en buffer WebP via Canvas API
+ * @param {string} dataUrl - data:image/...;base64,...
+ * @param {number} quality - 0 à 1, défaut 0.85
+ * @returns {Promise<Uint8Array>}
+ */
+async function convertToWebP(dataUrl, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas    = document.createElement('canvas');
+      canvas.width    = img.naturalWidth;
+      canvas.height   = img.naturalHeight;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      canvas.toBlob(blob => {
+        if (!blob) { reject(new Error('Conversion WebP échouée')); return; }
+        blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf)));
+      }, 'image/webp', quality);
+    };
+    img.onerror = () => reject(new Error('Image invalide'));
+    img.src = dataUrl;
+  });
+}
+
+function setupWebPublish() {
+  // Ouvrir le modal de publication
+  document.getElementById('btn-open-publish').addEventListener('click', async () => {
+    const product = state.editingId
+      ? state.products.find(p => p.id === state.editingId)
+      : null;
+    if (!product) return;
+
+    openPublishModal(product);
+  });
+
+  // Confirmer la publication
+  document.getElementById('btn-confirm-publish').addEventListener('click', handlePublish);
+
+  // Retirer du site
+  document.getElementById('btn-unpublish').addEventListener('click', handleUnpublish);
+}
+
+async function openPublishModal(product) {
+  // Pré-remplir description courte
+  document.getElementById('pub-description').value =
+    product.description?.split('\n')[0]?.trim() || '';
+
+  // Pré-remplir composition depuis la description complète
+  document.getElementById('pub-composition').value = product.description?.trim() || '';
+
+  // Réinitialiser les autres champs
+  document.getElementById('pub-category').value  = '';
+  document.getElementById('pub-subcat').value    = '';
+  document.getElementById('pub-materials').value = '';
+  document.getElementById('pub-badge').value     = '';
+  document.getElementById('pub-featured').checked = false;
+  document.getElementById('err-pub-category').style.display = 'none';
+
+  // Aperçu photo
+  const preview = document.getElementById('pub-photo-preview');
+  if (product.photo) {
+    preview.innerHTML = `<img src="${product.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:5px">`;
+  } else {
+    preview.textContent = 'Aucune photo sur ce produit';
+  }
+
+  // Vérifier si déjà publié
+  const statusEl = document.getElementById('publish-status');
+  const unpublishBtn = document.getElementById('btn-unpublish');
+  statusEl.style.display = 'none';
+  unpublishBtn.style.display = 'none';
+  document.getElementById('btn-publish-label').textContent = 'Publier';
+
+  // Vérification asynchrone du statut sur le site
+  try {
+    const res = await window.api.products.checkWebStatus(product.name, '');
+    if (res.ok && res.data) {
+      const cats = { canapes: 'Canapés', tables: 'Tables basses', tapis: 'Tapis' };
+      statusEl.style.cssText = 'display:block;margin-bottom:16px;padding:10px 14px;border-radius:6px;font-size:13px;background:#d1fae5;color:#065f46;border:1px solid #a7f3d0';
+      statusEl.textContent   = `✅ Déjà publié sur le site (${cats[res.data.category] || res.data.category})`;
+      document.getElementById('pub-category').value = res.data.category || '';
+      document.getElementById('btn-publish-label').textContent = 'Mettre à jour';
+      unpublishBtn.style.display = 'inline-flex';
+    }
+  } catch {}
+
+  document.getElementById('modal-publish').classList.add('show');
+}
+
+async function handlePublish() {
+  const category = document.getElementById('pub-category').value;
+  if (!category) {
+    document.getElementById('err-pub-category').style.display = 'block';
+    return;
+  }
+  document.getElementById('err-pub-category').style.display = 'none';
+
+  const product = state.editingId
+    ? state.products.find(p => p.id === state.editingId)
+    : null;
+  if (!product) return;
+
+  const btn = document.getElementById('btn-confirm-publish');
+  btn.disabled = true;
+  document.getElementById('btn-publish-label').textContent = 'Publication en cours…';
+
+  try {
+    // Conversion WebP de la photo si disponible
+    let webpArray = null;
+    if (product.photo) {
+      const buffer = await convertToWebP(product.photo);
+      webpArray = Array.from(buffer); // IPC ne transmet pas Uint8Array directement
+    }
+
+    const webSettings = {
+      category:    category,
+      subcat:      document.getElementById('pub-subcat').value.trim(),
+      description: document.getElementById('pub-description').value.trim(),
+      composition: document.getElementById('pub-composition').value.trim(),
+      materials:   document.getElementById('pub-materials').value,
+      badge:       document.getElementById('pub-badge').value || null,
+      featured:    document.getElementById('pub-featured').checked,
+    };
+
+    const res = await window.api.products.publishToWeb(product.id, webSettings, webpArray);
+
+    if (!res.ok) throw new Error(res.error || 'Erreur inconnue');
+
+    document.getElementById('modal-publish').classList.remove('show');
+    Utils.toast(`✅ "${product.name}" publié sur mildecor.fr`, 'success');
+
+  } catch (err) {
+    Utils.toast(`Erreur publication : ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    document.getElementById('btn-publish-label').textContent = 'Publier';
+  }
+}
+
+async function handleUnpublish() {
+  const product = state.editingId
+    ? state.products.find(p => p.id === state.editingId)
+    : null;
+  if (!product) return;
+
+  const category = document.getElementById('pub-category').value;
+  if (!confirm(`Retirer "${product.name}" du site mildecor.fr ?`)) return;
+
+  try {
+    const res = await window.api.products.unpublishFromWeb(product.name, category);
+    if (!res.ok) throw new Error(res.error);
+    document.getElementById('modal-publish').classList.remove('show');
+    Utils.toast(`"${product.name}" retiré du site`, 'success');
+  } catch (err) {
+    Utils.toast(`Erreur : ${err.message}`, 'error');
+  }
 }

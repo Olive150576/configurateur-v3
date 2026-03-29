@@ -3,7 +3,8 @@
  * Pont entre le renderer (window.api.products.*) et ProductService
  */
 
-const ProductService = require('../services/ProductService');
+const ProductService    = require('../services/ProductService');
+const WebPublishService = require('../services/WebPublishService');
 const { ValidationError } = require('../utils/validator');
 const QRCode = require('qrcode');
 
@@ -22,6 +23,24 @@ function register(ipcMain) {
     wrap(() => ProductService.bulkUpdatePrices(supplierId, collection, pct))
   );
   ipcMain.handle('products:remove', (_, id) => wrap(() => ProductService.remove(id)));
+
+  // ── Publication vers le site mildecor.fr ─────────────────────────────────
+  ipcMain.handle('products:publishToWeb', (_, id, webSettings, webpArray) =>
+    wrap(async () => {
+      const product    = await ProductService.getById(id);
+      if (!product) throw new Error(`Produit ${id} introuvable`);
+      const webpBuffer = webpArray ? new Uint8Array(webpArray) : null;
+      return WebPublishService.publish(product, webSettings, webpBuffer);
+    })
+  );
+
+  ipcMain.handle('products:unpublishFromWeb', (_, name, category) =>
+    wrap(() => WebPublishService.unpublish(name, category))
+  );
+
+  ipcMain.handle('products:checkWebStatus', (_, name, category) =>
+    wrap(() => WebPublishService.findSiteProduct(name, category))
+  );
 
   ipcMain.handle('products:generateQR', (_, text) =>
     wrap(() => QRCode.toDataURL(text, {

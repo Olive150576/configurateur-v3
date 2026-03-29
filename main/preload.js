@@ -24,6 +24,10 @@ contextBridge.exposeInMainWorld('api', {
       ipcRenderer.invoke('products:bulkUpdatePrices', supplierId, collection, pct),
     generateQR: (text) => ipcRenderer.invoke('products:generateQR', text),
     remove:    (id)            => ipcRenderer.invoke('products:remove', id),
+    // ── Publication site web ──────────────────────────────────────────────
+    publishToWeb:     (id, settings, webpArray) => ipcRenderer.invoke('products:publishToWeb', id, settings, webpArray),
+    unpublishFromWeb: (name, category)          => ipcRenderer.invoke('products:unpublishFromWeb', name, category),
+    checkWebStatus:   (name, category)          => ipcRenderer.invoke('products:checkWebStatus', name, category),
   },
 
   // ==================== FOURNISSEURS ====================
