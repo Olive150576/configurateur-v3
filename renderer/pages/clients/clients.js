@@ -57,6 +57,7 @@ function setupModal() {
     if (btn.dataset.action === 'view-client')    openViewModal(id);
     if (btn.dataset.action === 'edit-client')    editClient(id);
     if (btn.dataset.action === 'new-doc-client') newDocForClient(id);
+    if (btn.dataset.action === 'delete-client')  deleteClient(id, btn.dataset.name);
   });
 
   // Boutons fermeture via JS (plus fiable que onclick inline)
@@ -171,6 +172,9 @@ function renderTable(clients) {
             data-action="edit-client" data-id="${c.id}">✏️</button>
           <button class="btn btn-ghost btn-sm btn-icon" title="Nouveau devis"
             data-action="new-doc-client" data-id="${c.id}">📄</button>
+          <button class="btn btn-ghost btn-sm btn-icon" title="Supprimer"
+            data-action="delete-client" data-id="${c.id}" data-name="${Utils.escapeHtml(c.name)}"
+            style="color:var(--color-error)">🗑</button>
         </div>
       </td>
     `;
@@ -343,6 +347,20 @@ function newDocForClient(clientId) {
   // Naviguer vers documents avec le client pré-sélectionné (via query string)
   const params = new URLSearchParams({ client_id: client.id, client_name: client.name });
   window.location.href = `../documents/index.html?${params}`;
+}
+
+// ==================== SUPPRESSION ====================
+
+async function deleteClient(clientId, clientName) {
+  if (!confirm(`Supprimer définitivement "${clientName}" ?\n\nCette action est irréversible.`)) return;
+
+  const res = await window.api.clients.remove(clientId);
+  if (!res.ok) {
+    Utils.toast(`Erreur : ${res.error}`, 'error');
+    return;
+  }
+  Utils.toast(`Client "${clientName}" supprimé`, 'success');
+  await loadClients();
 }
 
 // ==================== IMPORT / EXPORT ====================

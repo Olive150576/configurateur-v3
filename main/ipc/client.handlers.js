@@ -12,6 +12,7 @@ function register(ipcMain) {
   ipcMain.handle('clients:search',    (_, term)       => wrap(() => ClientService.search(term)));
   ipcMain.handle('clients:exportCSV', ()              => wrap(() => ClientService.exportCSV()));
   ipcMain.handle('clients:importCSV', (_, rows)       => wrap(() => ClientService.importCSV(rows)));
+  ipcMain.handle('clients:remove',    (_, id)         => wrap(() => ClientService.remove(id)));
 }
 
 module.exports = { register };

@@ -1,6 +1,6 @@
 {
   "name": "configurateur-v3",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Configurateur de devis mobilier",
   "main": "main/index.js",
   "author": "Olive150576",

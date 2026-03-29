@@ -64,6 +64,7 @@ contextBridge.exposeInMainWorld('api', {
     search:    (term)      => ipcRenderer.invoke('clients:search', term),
     exportCSV: ()          => ipcRenderer.invoke('clients:exportCSV'),
     importCSV: (rows)      => ipcRenderer.invoke('clients:importCSV', rows),
+    remove:    (id)        => ipcRenderer.invoke('clients:remove', id),
   },
 
   // ==================== IMPRESSION ====================

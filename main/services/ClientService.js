@@ -123,4 +123,11 @@ async function importCSV(rows) {
   return { imported, errors };
 }
 
-module.exports = { getAll, getById, create, update, search, exportCSV, importCSV };
+async function remove(id) {
+  const sb = getSupabase();
+  const { error } = await sb.from('clients').delete().eq('id', id);
+  if (error) sbErr(error);
+  log('client', id, 'deleted');
+}
+
+module.exports = { getAll, getById, create, update, search, exportCSV, importCSV, remove };
