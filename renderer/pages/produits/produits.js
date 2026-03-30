@@ -468,6 +468,7 @@ function openProductModal(product = null) {
   document.getElementById('f-description').value     = product?.description     ?? '';
   document.getElementById('f-supplier-notes').value  = product?.supplier_notes  ?? '';
   document.getElementById('f-coefficient').value     = product?.purchase_coefficient ?? 2.0;
+  document.getElementById('f-eco').value             = product?.eco_participation ?? 0;
 
   // Photos
   state.editingPhotos = [];
@@ -566,8 +567,9 @@ async function handleSaveProduct() {
     price_rounding,
     valid_from:  validFrom,
     valid_until: validUntil,
-    photo:   state.editingPhotos[0]?.photo ?? '',   // rétrocompatibilité
-    photos:  state.editingPhotos,
+    photo:             state.editingPhotos[0]?.photo ?? '',   // rétrocompatibilité
+    photos:            state.editingPhotos,
+    eco_participation: parseFloat(document.getElementById('f-eco').value) || 0,
     ranges:  state.editingRanges,
     modules: state.editingModules,
     options: state.editingOptions,

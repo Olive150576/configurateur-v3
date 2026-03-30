@@ -375,6 +375,7 @@ async function openPrint() {
     title:      t.title,
     price:      t.salePrice,
     dimensions: t.dimensions || '',
+    ecoHT:      selectedProduct?.eco_participation ?? 0,
   })));
 
   try {

@@ -121,7 +121,7 @@ function renderDocument(doc, company, logo, vatRate) {
     <div class="lines">
       ${renderLinesTable(lines, vatRate)}
     </div>
-    ${renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate, company)}
+    ${renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate, company, lines)}
     ${renderFooter(company, doc.type)}
   `;
 }
@@ -268,6 +268,27 @@ function renderLinesTable(lines, vatRate) {
       return;
     }
 
+    // Ligne éco-participation
+    if (line.is_eco) {
+      const ecoTTC = r2((line.unit_price ?? 0) * (line.qty || 1) * (1 + vatRate / 100));
+      rows.push(`
+        <tr class="eco-row">
+          <td class="td-num" style="color:#15803d">♻</td>
+          <td class="td-desig">
+            <div class="desig-main" style="color:#15803d">Éco-participation (Éco-mobilier)</div>
+            <div class="desig-eco-badge">Non remisable</div>
+          </td>
+          <td class="td-qty">${line.qty || 1}</td>
+          <td class="td-pu">${formatAmount(line.unit_price ?? 0)}<span class="td-pu-label">€ HT</span></td>
+          <td class="td-tva">${vatRate}%</td>
+          <td class="td-total">
+            <span class="td-total-ttc">${formatAmount(ecoTTC)}</span>
+            <span class="td-total-label">€ TTC</span>
+          </td>
+        </tr>`);
+      return;
+    }
+
     const colorRef    = line.color_ref || '';
     const productDesc = line.product_config?.product_description || '';
     const lineQty     = line.qty || 1;
@@ -358,11 +379,19 @@ function renderRow(idx, name, qty, unitHT, vatRate, isOption = false, colorRef =
 
 // ==================== TOTALS ====================
 
-function renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate, company = {}) {
+function renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate, company = {}, lines = []) {
   const docType = doc.type;
   const discPct    = doc.discount_percent ?? 0;
   const discAmt    = doc.discount_amount  ?? 0;
   const discLabel  = (discPct > 0 && Number.isInteger(discPct)) ? `Remise ${discPct}%` : 'Remise';
+
+  // Séparation éco / régulier
+  const ecoLines     = lines.filter(l => l.is_eco);
+  const ecoSubHT     = r2(ecoLines.reduce((s, l) => s + (l.unit_price ?? 0) * (l.qty || 1), 0));
+  const ecoTTC       = r2(ecoSubHT * (1 + vatRate / 100));
+  const regularSubHT = r2(subtotalHT - ecoSubHT);
+  const regularVat   = r2(regularSubHT * vatRate / 100);
+  const regularTTC   = r2(regularSubHT + regularVat);
 
   // Acompte : utiliser deposit_amount directement (TTC), sinon recalculer sur netTTC
   const depositTTC = doc.deposit_amount > 0
@@ -377,16 +406,26 @@ function renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate, c
       <div class="total-ht-rows">
         <div class="total-ht-row">
           <span>Sous-total HT</span>
-          <span>${formatPrice(subtotalHT)} €</span>
+          <span>${formatPrice(regularSubHT)} €</span>
         </div>
         <div class="total-ht-row">
           <span>TVA ${vatRate}%</span>
-          <span>${formatPrice(vatAmt)} €</span>
+          <span>${formatPrice(regularVat)} €</span>
         </div>
+        ${ecoSubHT > 0 ? `
+          <div class="total-ht-row" style="color:#15803d">
+            <span>♻ Éco-participation HT</span>
+            <span>${formatPrice(ecoSubHT)} €</span>
+          </div>
+          <div class="total-ht-row" style="color:#15803d">
+            <span>↳ TVA ${vatRate}%</span>
+            <span>${formatPrice(r2(ecoTTC - ecoSubHT))} €</span>
+          </div>
+        ` : ''}
         ${discAmt > 0 ? `
           <div class="total-ht-row">
             <span>Total TTC</span>
-            <span>${formatPrice(totalTTC_brut)} €</span>
+            <span>${formatPrice(r2(regularTTC + ecoTTC))} €</span>
           </div>
           <div class="total-ht-row">
             <span>${discLabel}</span>

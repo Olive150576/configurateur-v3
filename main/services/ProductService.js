@@ -106,6 +106,7 @@ async function create(data) {
     price_rounding:       data.price_rounding ?? 'none',
     photo:                data.photo || '',
     supplier_notes:       data.supplier_notes?.trim() || '',
+    eco_participation:    data.eco_participation ?? 0,
   });
   if (pErr) sbErr(pErr);
 
@@ -203,6 +204,7 @@ async function update(id, data) {
     price_rounding:       data.price_rounding           ?? existing.price_rounding ?? 'none',
     photo:                data.photo                    ?? existing.photo ?? '',
     supplier_notes:       data.supplier_notes?.trim()   ?? existing.supplier_notes ?? '',
+    eco_participation:    data.eco_participation         ?? existing.eco_participation ?? 0,
     updated_at:           new Date().toISOString(),
   }).eq('id', id);
   if (pErr) sbErr(pErr);

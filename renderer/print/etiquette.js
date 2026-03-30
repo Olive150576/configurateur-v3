@@ -344,6 +344,10 @@ function getModuleSVG(title) {
 
 function renderTile(tile) {
   const [intPart, decPart] = formatPrice(tile.price);
+  const ecoHT  = parseFloat(tile.ecoHT || 0);
+  const ecoTTC = ecoHT > 0 ? Math.round(ecoHT * 1.2 * 100) / 100 : 0;
+  const ecoStr = ecoTTC > 0 ? ecoTTC.toFixed(2).replace('.', ',') : '';
+
   return `
     <div class="price-card">
       <div class="card-schema">${getModuleSVG(tile.title)}</div>
@@ -359,6 +363,7 @@ function renderTile(tile) {
           <div class="price-ttc">TTC</div>
         </div>
       </div>
+      ${ecoStr ? `<div class="eco-line">dont éco-participation : ${ecoStr} € TTC</div>` : ''}
     </div>`;
 }
 
