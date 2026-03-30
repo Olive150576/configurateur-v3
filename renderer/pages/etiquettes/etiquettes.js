@@ -292,7 +292,19 @@ function addTile() {
       .join(' + ');
   }
 
-  tileCombinations.push({ id: Date.now(), title, dimensions: baseDimensions, salePrice: totalSale });
+  // Éco-participation : priorité module/gamme → produit
+  let ecoHT = 0;
+  if (hasModules) {
+    const moduleId = document.getElementById('builder-base').value;
+    const mod = (product.modules || []).find(m => m.id === moduleId);
+    ecoHT = mod?.eco_participation || selectedProduct?.eco_participation || 0;
+  } else {
+    const rangeId = document.getElementById('builder-base').value;
+    const range = (product.ranges || []).find(r => r.id === rangeId);
+    ecoHT = range?.eco_participation || selectedProduct?.eco_participation || 0;
+  }
+
+  tileCombinations.push({ id: Date.now(), title, dimensions: baseDimensions, salePrice: totalSale, ecoHT });
   renderTilesList();
   updatePreview();
 
@@ -375,7 +387,7 @@ async function openPrint() {
     title:      t.title,
     price:      t.salePrice,
     dimensions: t.dimensions || '',
-    ecoHT:      selectedProduct?.eco_participation ?? 0,
+    ecoHT:      t.ecoHT ?? selectedProduct?.eco_participation ?? 0,
   })));
 
   try {

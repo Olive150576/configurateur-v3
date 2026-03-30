@@ -672,12 +672,20 @@ function handleAddConfig() {
     },
   };
 
+  // Éco : priorité module(s) sélectionné(s) → gamme → produit
+  const hasModulesForEco = (product.modules || []).length > 0;
+  let ecoHT = 0;
+  if (hasModulesForEco && selectedModules.length > 0) {
+    ecoHT = selectedModules.reduce((sum, m) => sum + (m.eco_participation || 0), 0);
+  } else {
+    ecoHT = range?.eco_participation || product.eco_participation || 0;
+  }
+
   if (state.cfg.editingIdx !== null) {
     state.devisLines[state.cfg.editingIdx] = line;
-    // Mettre à jour la ligne éco associée
     const ecoIdx = state.devisLines.findIndex(l => l.is_eco && l.parentLineId === line.id);
-    if (product.eco_participation > 0) {
-      const ecoLine = buildEcoLine(product.eco_participation, qty, line.id, ecoIdx >= 0 ? state.devisLines[ecoIdx].id : null);
+    if (ecoHT > 0) {
+      const ecoLine = buildEcoLine(ecoHT, qty, line.id, ecoIdx >= 0 ? state.devisLines[ecoIdx].id : null);
       if (ecoIdx >= 0) state.devisLines[ecoIdx] = ecoLine;
       else state.devisLines.splice(state.cfg.editingIdx + 1, 0, ecoLine);
     } else if (ecoIdx >= 0) {
@@ -685,8 +693,8 @@ function handleAddConfig() {
     }
   } else {
     state.devisLines.push(line);
-    if (product.eco_participation > 0) {
-      state.devisLines.push(buildEcoLine(product.eco_participation, qty, line.id, null));
+    if (ecoHT > 0) {
+      state.devisLines.push(buildEcoLine(ecoHT, qty, line.id, null));
     }
   }
 

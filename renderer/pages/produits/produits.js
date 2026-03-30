@@ -681,10 +681,11 @@ function openRangeModal(idx = null) {
   state.editingRangeIdx = idx;
   const range = idx !== null ? state.editingRanges[idx] : null;
 
-  document.getElementById('r-id').value         = range?.id         ?? '';
-  document.getElementById('r-name').value        = range?.name       ?? '';
-  document.getElementById('r-price').value       = range?.base_price ?? '';
-  document.getElementById('r-dimensions').value  = range?.dimensions ?? '';
+  document.getElementById('r-id').value         = range?.id                ?? '';
+  document.getElementById('r-name').value        = range?.name             ?? '';
+  document.getElementById('r-price').value       = range?.base_price       ?? '';
+  document.getElementById('r-dimensions').value  = range?.dimensions       ?? '';
+  document.getElementById('r-eco').value         = range?.eco_participation ?? '';
   document.getElementById('r-id').disabled = idx !== null; // ID non modifiable en édition
 
   ['r-id','r-name','r-price'].forEach(id => {
@@ -711,6 +712,7 @@ function handleSaveRange() {
   const name  = document.getElementById('r-name').value.trim();
   const price = parseFloat(document.getElementById('r-price').value);
   const dims  = document.getElementById('r-dimensions').value.trim();
+  const eco   = parseFloat(document.getElementById('r-eco').value) || 0;
 
   let valid = true;
   if (!id)          { showFieldError('r-id',    'err-r-id',    'ID obligatoire');    valid = false; }
@@ -730,10 +732,10 @@ function handleSaveRange() {
       showFieldError('r-id', 'err-r-id', 'Cet ID existe déjà');
       return;
     }
-    state.editingRanges.push({ id, name, base_price: price, dimensions: dims });
+    state.editingRanges.push({ id, name, base_price: price, dimensions: dims, eco_participation: eco });
   } else {
     state.editingRanges[state.editingRangeIdx] = {
-      ...state.editingRanges[state.editingRangeIdx], name, base_price: price, dimensions: dims
+      ...state.editingRanges[state.editingRangeIdx], name, base_price: price, dimensions: dims, eco_participation: eco
     };
   }
 
@@ -763,10 +765,11 @@ function openModuleModal(idx = null) {
   state.editingModuleIdx = idx;
   const module = idx !== null ? state.editingModules[idx] : null;
 
-  document.getElementById('m-id').value         = module?.id          ?? '';
-  document.getElementById('m-name').value       = module?.name        ?? '';
-  document.getElementById('m-desc').value       = module?.description ?? '';
-  document.getElementById('m-dimensions').value = module?.dimensions  ?? '';
+  document.getElementById('m-id').value         = module?.id                ?? '';
+  document.getElementById('m-name').value       = module?.name             ?? '';
+  document.getElementById('m-desc').value       = module?.description      ?? '';
+  document.getElementById('m-dimensions').value = module?.dimensions       ?? '';
+  document.getElementById('m-eco').value        = module?.eco_participation ?? '';
   document.getElementById('m-id').disabled = idx !== null;
 
   // Générer les inputs prix par gamme
@@ -810,6 +813,7 @@ function handleSaveModule() {
   const name = document.getElementById('m-name').value.trim();
   const desc = document.getElementById('m-desc').value.trim();
   const dims = document.getElementById('m-dimensions').value.trim();
+  const eco  = parseFloat(document.getElementById('m-eco').value) || 0;
 
   let valid = true;
   if (!id)   { showFieldError('m-id',   'err-m-id',   'ID obligatoire');  valid = false; }
@@ -834,14 +838,14 @@ function handleSaveModule() {
 
   if (!valid) return;
 
-  const moduleData = { id, name, description: desc, dimensions: dims, prices };
+  const moduleData = { id, name, description: desc, dimensions: dims, eco_participation: eco, prices };
 
   if (state.editingModuleIdx === null) {
     state.editingModules.push(moduleData);
   } else {
     state.editingModules[state.editingModuleIdx] = {
       ...state.editingModules[state.editingModuleIdx],
-      name, description: desc, dimensions: dims, prices
+      name, description: desc, dimensions: dims, eco_participation: eco, prices
     };
   }
 
