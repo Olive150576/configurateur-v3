@@ -124,6 +124,7 @@ async function create(data) {
         id: newRangeId, product_id: id,
         name: r.name.trim(), base_price: r.base_price,
         dimensions: r.dimensions?.trim() || '', sort_order: i,
+        eco_participation: r.eco_participation ?? 0,
       });
       if (rErr) throw new Error(rErr.message);
     }
@@ -136,6 +137,7 @@ async function create(data) {
         id: moduleId, product_id: id,
         name: m.name.trim(), description: m.description?.trim() || '',
         dimensions: m.dimensions?.trim() || '', sort_order: i,
+        eco_participation: m.eco_participation ?? 0,
       });
       if (mErr) throw new Error(mErr.message);
 
@@ -223,6 +225,7 @@ async function update(id, data) {
         id: r.id || generateId('range'), product_id: id,
         name: r.name.trim(), base_price: r.base_price,
         dimensions: r.dimensions?.trim() || '', sort_order: i,
+        eco_participation: r.eco_participation ?? 0,
       });
       if (rErr) sbErr(rErr);
     }
@@ -238,6 +241,7 @@ async function update(id, data) {
         id: moduleId, product_id: id,
         name: m.name.trim(), description: m.description?.trim() || '',
         dimensions: m.dimensions?.trim() || '', sort_order: i,
+        eco_participation: m.eco_participation ?? 0,
       });
       if (mErr) sbErr(mErr);
 
