@@ -23,7 +23,8 @@ function normalizeProduct(p) {
 
   return {
     ...product,
-    supplier_name: suppliers?.name || null,
+    supplier_name:           suppliers?.name           || null,
+    supplier_delivery_weeks: suppliers?.delivery_weeks || null,
     ranges: (ranges || []).sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name)),
     modules: (modules || [])
       .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
@@ -43,7 +44,7 @@ function normalizeProduct(p) {
 
 const PRODUCT_SELECT = `
   *,
-  suppliers(name),
+  suppliers(name, delivery_weeks),
   ranges(*),
   modules(*, module_prices(*)),
   options(*),

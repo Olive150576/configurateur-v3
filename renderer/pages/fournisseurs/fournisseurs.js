@@ -177,6 +177,7 @@ function openSupplierModal(supplier = null) {
     'f-sav-name':         supplier?.sav_name         ?? '',
     'f-sav-phone':        supplier?.sav_phone        ?? '',
     'f-sav-email':        supplier?.sav_email        ?? '',
+    'f-delivery-weeks':   supplier?.delivery_weeks   ?? '',
   };
   Object.entries(fields).forEach(([id, val]) => {
     const el = document.getElementById(id);
@@ -233,6 +234,7 @@ async function handleSaveSupplier() {
     sav_name:         document.getElementById('f-sav-name').value.trim(),
     sav_phone:        document.getElementById('f-sav-phone').value.trim(),
     sav_email:        document.getElementById('f-sav-email').value.trim(),
+    delivery_weeks:   document.getElementById('f-delivery-weeks').value.trim(),
   };
 
   const btn = document.getElementById('btn-save-supplier');

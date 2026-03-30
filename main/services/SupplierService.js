@@ -18,6 +18,7 @@ const FIELDS = {
   contact: '', contact_phone: '', contact_email: '',
   commercial_name: '', commercial_phone: '', commercial_email: '',
   sav_name: '', sav_phone: '', sav_email: '',
+  delivery_weeks: '',
 };
 
 function normalize(data) {
