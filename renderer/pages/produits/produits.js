@@ -1634,6 +1634,10 @@ function buildSocialText(product, network) {
 let _socialProduct = null;
 let _socialNetwork = 'instagram';
 
+function closeSocialModal() {
+  document.getElementById('modal-social').classList.remove('show');
+}
+
 function setupSocialPost() {
   document.getElementById('btn-open-social').addEventListener('click', () => {
     const product = state.editingId
@@ -1641,6 +1645,14 @@ function setupSocialPost() {
       : null;
     if (!product) return;
     openSocialModal(product);
+  });
+
+  // Fermeture : boutons data-close-modal + clic backdrop
+  document.querySelectorAll('[data-close-modal="modal-social"]').forEach(btn => {
+    btn.addEventListener('click', closeSocialModal);
+  });
+  document.getElementById('modal-social').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-social')) closeSocialModal();
   });
 
   // Onglets réseau

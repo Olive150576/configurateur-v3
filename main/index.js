@@ -2,7 +2,7 @@
  * Main process Electron — Point d'entrée
  */
 
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const { initDatabase } = require('./db/database');
 const { autoUpdater } = require('electron-updater');
@@ -127,6 +127,7 @@ autoUpdater.on('error', (err) => {
 ipcMain.handle('update:check',    () => wrap(() => { checkForUpdates(); return { checking: true }; }));
 ipcMain.handle('update:download', () => wrap(() => { autoUpdater.downloadUpdate(); return { downloading: true }; }));
 ipcMain.handle('update:install',  () => { autoUpdater.quitAndInstall(); });
+ipcMain.handle('shell:openExternal', (_, url) => shell.openExternal(url));
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

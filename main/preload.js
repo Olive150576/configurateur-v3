@@ -4,7 +4,7 @@
  * Aucun accès direct à Node.js depuis la UI
  */
 
-const { contextBridge, ipcRenderer, shell } = require('electron');
+const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
 
@@ -118,6 +118,6 @@ contextBridge.exposeInMainWorld('api', {
 
   // ==================== SHELL ====================
   shell: {
-    openExternal: (url) => shell.openExternal(url),
+    openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
   },
 });
