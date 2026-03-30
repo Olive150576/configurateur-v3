@@ -663,6 +663,7 @@ function handleAddConfig() {
     product_config: {
       product_id:               product.id,
       range_id:                 state.cfg.rangeId,
+      range_dimensions:         range?.dimensions                || '',
       supplier_name:            product.supplier_name            || '',
       supplier_delivery_weeks:  product.supplier_delivery_weeks  || '',
       product_description:      product.description              || '',

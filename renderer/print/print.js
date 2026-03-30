@@ -302,7 +302,8 @@ function renderLinesTable(lines, vatRate) {
       modules.forEach((mod, i) => {
         // Description produit sur le 1er module uniquement
         const extraDesc = i === 0 && productDesc ? productDesc : '';
-        rows.push(renderRow(idx++, mod.name, mod.qty || 1, mod.unit_price, vatRate, false, colorRef, mod.description || '', extraDesc));
+        const modDesc   = [mod.dimensions, mod.description].filter(Boolean).join(' — ');
+        rows.push(renderRow(idx++, mod.name, mod.qty || 1, mod.unit_price, vatRate, false, colorRef, modDesc, extraDesc));
       });
       // Options éventuelles (supplément)
       options.forEach(opt => {
@@ -310,8 +311,9 @@ function renderLinesTable(lines, vatRate) {
       });
     } else {
       // Pas de modules → la ligne entière
-      const desig = (line.designation || '').replace(' — ', ' · ');
-      rows.push(renderRow(idx++, desig, lineQty, line.unit_price ?? 0, vatRate, false, colorRef, '', productDesc));
+      const desig    = (line.designation || '').replace(' — ', ' · ');
+      const rangeDim = line.product_config?.range_dimensions || '';
+      rows.push(renderRow(idx++, desig, lineQty, line.unit_price ?? 0, vatRate, false, colorRef, rangeDim, productDesc));
     }
   });
 
@@ -461,7 +463,8 @@ function renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate, c
             : ''}
           ${(() => {
               const supplierWeeks = lines[0]?.product_config?.supplier_delivery_weeks;
-              const weeks = supplierWeeks || (company && company.delivery_weeks);
+              const raw   = supplierWeeks || (company && company.delivery_weeks) || '';
+              const weeks = raw.replace(/\s*semaines?\s*$/i, '').trim();
               return weeks
                 ? `<div>Délai de livraison estimé : <strong>${esc(weeks)} semaines</strong> après versement de l'acompte et confirmation de commande.</div>`
                 : '';
