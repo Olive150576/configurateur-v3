@@ -74,6 +74,8 @@ function buildSiteProduct(product, webSettings, imageUrls) {
     badge:            webSettings.badge?.trim() || null,
     materials,
     featured:         !!webSettings.featured,
+    is_destockage:    !!product.is_destockage,
+    destockage_price: product.destockage_price || null,
     image:            imageUrl || null,
     images:           imageUrls && imageUrls.length > 0 ? imageUrls : [],
     modules,

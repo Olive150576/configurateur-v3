@@ -108,6 +108,8 @@ async function create(data) {
     photo:                data.photo || '',
     supplier_notes:       data.supplier_notes?.trim() || '',
     eco_participation:    data.eco_participation ?? 0,
+    is_destockage:        data.is_destockage     ?? 0,
+    destockage_price:     data.destockage_price  ?? null,
   });
   if (pErr) sbErr(pErr);
 
@@ -206,6 +208,8 @@ async function update(id, data) {
     photo:                data.photo                    ?? existing.photo ?? '',
     supplier_notes:       data.supplier_notes?.trim()   ?? existing.supplier_notes ?? '',
     eco_participation:    data.eco_participation         ?? existing.eco_participation ?? 0,
+    is_destockage:        data.is_destockage             ?? existing.is_destockage     ?? 0,
+    destockage_price:     data.destockage_price          ?? existing.destockage_price  ?? null,
     updated_at:           new Date().toISOString(),
   }).eq('id', id);
   if (pErr) sbErr(pErr);

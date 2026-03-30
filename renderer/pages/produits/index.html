@@ -401,21 +401,6 @@
               value="2.0" min="0.1" max="20" step="0.01">
             <p class="text-sm text-muted" style="margin-top:4px">Prix vente = PA × coeff</p>
           </div>
-          <div class="form-group" style="flex:0 0 170px">
-            <label class="form-label" for="f-eco">Éco-participation HT</label>
-            <div style="display:flex;align-items:center;gap:6px">
-              <input type="number" id="f-eco" class="form-control" min="0" step="0.01" placeholder="0,00" style="width:100px">
-              <span style="color:var(--color-muted);font-size:12px">€ HT</span>
-            </div>
-            <p class="text-sm text-muted" style="margin-top:4px">Non remisable (Éco-mobilier)</p>
-          </div>
-          <div class="form-group" style="padding-top:26px">
-            <div style="background:#f0fdf4;border:1px solid #86efac;padding:10px 14px;border-radius:6px;font-size:11px;color:#15803d;line-height:1.6">
-              <strong>Référence Éco-mobilier :</strong><br>
-              Canapé 2-3 pl. : 11–15 € · Grand/Angle : 18–25 €<br>
-              Convertible : 22–32 € · Fauteuil : 3–5 €
-            </div>
-          </div>
         </div>
         <div class="form-group" style="margin-top:4px">
           <label class="form-label">Arrondi du prix de vente</label>
@@ -432,6 +417,22 @@
               <input type="radio" name="price-rounding" id="r-round-ten" value="ten">
               À la dizaine (851€→850 / 857€→860)
             </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Déstockage / Expo -->
+      <div style="margin-top:12px;padding:12px 14px;border:1px solid #fbbf24;border-radius:8px;background:#fffbeb">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="f-destockage" style="width:15px;height:15px;cursor:pointer">
+          <span style="font-weight:600;font-size:13px;color:#92400e">🏷️ Produit en déstockage / expo magasin</span>
+        </label>
+        <p class="text-sm text-muted" style="margin:4px 0 0 23px">Hors production ou faible rotation — affiché dans la section "Bons plans" du site</p>
+        <div id="destockage-price-row" style="display:none;margin-top:10px;margin-left:23px">
+          <label class="form-label" for="f-destockage-price">Prix expo TTC <span style="font-weight:400;color:#aaa">(optionnel)</span></label>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input type="number" id="f-destockage-price" class="form-control" min="0" step="1" placeholder="—" style="max-width:110px">
+            <span style="color:var(--color-muted);font-size:12px">€ TTC</span>
           </div>
         </div>
       </div>
@@ -654,6 +655,10 @@
           <label class="form-label">Éco-part. HT (€)</label>
           <input type="number" id="m-eco" class="form-control" min="0" step="0.01" placeholder="0.00">
         </div>
+      </div>
+      <div style="background:#f0fdf4;border:1px solid #86efac;padding:8px 12px;border-radius:6px;font-size:11px;color:#15803d;line-height:1.7;margin-bottom:12px">
+        <strong>Référence Éco-mobilier :</strong>
+        Fauteuil : 3–5 € · Canapé 2 pl. : 8–10 € · Canapé 3 pl. : 11–15 € · Angle : 18–25 € · Convertible : 22–32 €
       </div>
       <div id="module-prices-section">
         <label class="form-label" style="margin-bottom:8px">Prix par gamme (€)</label>
