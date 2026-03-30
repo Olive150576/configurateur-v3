@@ -503,7 +503,7 @@ function renderFooter(company, docType) {
         <strong>Mentions légales —</strong>
         Réserve de propriété : le transfert de propriété n'intervient qu'après paiement intégral du prix.
         Garantie légale de conformité (art. L217-1 et s. C.conso., 2 ans) et des vices cachés (art. 1641 et s. C.civ.).
-        ${docType === 'commande' ? 'Ce bon de commande vaut contrat de vente dès acceptation et versement de l'acompte.' : ''}
+        ${docType === 'commande' ? `Ce bon de commande vaut contrat de vente dès acceptation et versement de l'acompte.` : ''}
       </div>
       <div class="footer-contact-centered">
         ${contactParts.map(esc).join(' · ')}
