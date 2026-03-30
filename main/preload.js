@@ -115,4 +115,9 @@ contextBridge.exposeInMainWorld('api', {
     importDb:      ()        => ipcRenderer.invoke('app:importDb'),
     getVersion:    ()        => ipcRenderer.invoke('app:getVersion'),
   },
+
+  // ==================== SHELL ====================
+  shell: {
+    openExternal: (url) => shell.openExternal(url),
+  },
 });

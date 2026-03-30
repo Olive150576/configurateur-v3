@@ -479,6 +479,9 @@
 
     <div class="modal-footer">
       <button class="btn btn-ghost" data-close-modal="modal-product">Annuler</button>
+      <button class="btn btn-secondary" id="btn-open-social" title="Préparer un post pour les réseaux sociaux" style="display:none">
+        📲 Post réseaux
+      </button>
       <button class="btn btn-secondary" id="btn-open-publish" title="Publier ce produit sur mildecor.fr" style="display:none">
         🌐 Publier sur le site
       </button>
@@ -575,6 +578,61 @@
   </div>
 </div>
 
+
+<!-- ==================== MODAL POST RÉSEAUX SOCIAUX ==================== -->
+<div id="modal-social" class="modal-backdrop">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h2>📲 Préparer un post</h2>
+      <button class="modal-close" data-close-modal="modal-social">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Sélecteur de réseau -->
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button class="btn btn-secondary social-tab-btn active" data-net="instagram" style="flex:1;font-size:12px">📸 Instagram</button>
+        <button class="btn btn-ghost social-tab-btn" data-net="facebook" style="flex:1;font-size:12px">📘 Facebook</button>
+        <button class="btn btn-ghost social-tab-btn" data-net="google" style="flex:1;font-size:12px">📍 Google</button>
+      </div>
+
+      <!-- Aperçu photo -->
+      <div id="social-photo-preview" style="width:100%;height:120px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg-alt);display:flex;gap:4px;padding:4px;overflow:hidden;margin-bottom:14px"></div>
+
+      <!-- Texte généré -->
+      <div class="form-group">
+        <label class="form-label">Texte du post</label>
+        <textarea id="social-text" rows="8"
+          style="font-family:monospace;font-size:12px;line-height:1.6;resize:vertical"
+          class="form-input"></textarea>
+        <div style="font-size:11px;color:var(--color-muted);margin-top:4px">
+          Modifiable avant de copier · <span id="social-char-count">0</span> caractères
+        </div>
+      </div>
+
+      <!-- URL image (copiable) -->
+      <div class="form-group" id="social-url-group">
+        <label class="form-label">URL de la photo (à joindre au post)</label>
+        <div style="display:flex;gap:6px">
+          <input id="social-img-url" type="text" class="form-input" readonly
+            style="font-size:11px;color:var(--color-muted);flex:1">
+          <button class="btn btn-ghost" id="btn-copy-url" title="Copier l'URL" style="padding:0 10px;flex-shrink:0">📋</button>
+        </div>
+      </div>
+
+      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:10px 14px;font-size:12px;color:#15803d;line-height:1.6">
+        <strong>Comment utiliser :</strong><br>
+        1. Cliquer <strong>Copier le texte</strong><br>
+        2. Ouvrir <a id="link-metricool" href="https://app.metricool.com" target="_blank" style="color:#15803d;font-weight:600">Metricool ↗</a> ou Meta Business Suite<br>
+        3. Coller le texte, joindre la photo et planifier
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close-modal="modal-social">Fermer</button>
+      <button class="btn btn-secondary" id="btn-open-metricool">Ouvrir Metricool ↗</button>
+      <button class="btn btn-primary" id="btn-copy-social-text">📋 Copier le texte</button>
+    </div>
+  </div>
+</div>
 
 <!-- ==================== MINI-MODAL GAMME ==================== -->
 <div id="modal-range" class="modal-backdrop">

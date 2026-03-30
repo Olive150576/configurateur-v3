@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupBulkUpdate();
   setupCatalogue();
   setupWebPublish();
+  setupSocialPost();
   await loadProducts();
   await loadSuppliers();
 });
@@ -499,8 +500,9 @@ function openProductModal(product = null) {
   document.getElementById('modal-product-title').textContent =
     product ? `Éditer : ${product.name}` : 'Nouveau produit';
 
-  // Bouton "Publier sur le site" — visible seulement en mode édition
+  // Boutons visibles seulement en mode édition
   document.getElementById('btn-open-publish').style.display = product ? 'inline-flex' : 'none';
+  document.getElementById('btn-open-social').style.display  = product ? 'inline-flex' : 'none';
 
   hideAllErrors();
   document.getElementById('modal-error').style.display = 'none';
@@ -1594,4 +1596,146 @@ async function handleUnpublish() {
   } catch (err) {
     Utils.toast(`Erreur : ${err.message}`, 'error');
   }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   POST RÉSEAUX SOCIAUX
+══════════════════════════════════════════════════════════════ */
+
+const SOCIAL_HASHTAGS = {
+  canapes:  ['#canapé', '#canapédesign', '#intérieur', '#salondécoration', '#mildecor'],
+  tables:   ['#tablebasse', '#décomaison', '#salonstyle', '#mildecor'],
+  tapis:    ['#tapis', '#décosalon', '#tapisdécoration', '#mildecor'],
+  default:  ['#décoration', '#meubles', '#intérieur', '#mildecor'],
+};
+
+function buildSocialText(product, network) {
+  const name   = product.name || '';
+  const desc   = (product.description || '').split('\n')[0]?.trim() || '';
+  const mats   = (product.materials || []).join(', ');
+  const cat    = product.category || 'default';
+  const tags   = (SOCIAL_HASHTAGS[cat] || SOCIAL_HASHTAGS.default).join(' ');
+  const prix   = product.is_destockage && product.destockage_price
+    ? `💰 Prix exceptionnel déstockage : ${product.destockage_price.toLocaleString('fr-FR')} €\n`
+    : '';
+
+  if (network === 'instagram') {
+    return `✨ ${name}\n\n${desc ? desc + '\n\n' : ''}${mats ? `🛋️ ${mats}\n\n` : ''}${prix}📍 Disponible en magasin à Châlette-sur-Loing\n🌐 mildecor.fr\n\n${tags} #chalettesurLoing #loiret #45`;
+  }
+  if (network === 'facebook') {
+    return `🛋️ ${name}\n\n${desc ? desc + '\n\n' : ''}${mats ? `Matières : ${mats}\n\n` : ''}${prix}Venez découvrir ce produit en magasin à Châlette-sur-Loing ou retrouvez notre catalogue complet sur mildecor.fr\n\n📞 02 38 85 71 15\n📍 21 rue du 23 Août 1944, Châlette-sur-Loing\n\n${tags}`;
+  }
+  if (network === 'google') {
+    return `${name}${desc ? '\n\n' + desc : ''}\n\n${mats ? 'Disponible en : ' + mats + '\n\n' : ''}${prix}Venez nous rendre visite au magasin Mil Décor à Châlette-sur-Loing.\nConsultez notre catalogue sur mildecor.fr\n📞 02 38 85 71 15`;
+  }
+  return '';
+}
+
+let _socialProduct = null;
+let _socialNetwork = 'instagram';
+
+function setupSocialPost() {
+  document.getElementById('btn-open-social').addEventListener('click', () => {
+    const product = state.editingId
+      ? state.products.find(p => p.id === state.editingId)
+      : null;
+    if (!product) return;
+    openSocialModal(product);
+  });
+
+  // Onglets réseau
+  document.querySelectorAll('.social-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.social-tab-btn').forEach(b => {
+        b.classList.remove('active');
+        b.classList.add('btn-ghost');
+        b.classList.remove('btn-secondary');
+      });
+      btn.classList.add('active', 'btn-secondary');
+      btn.classList.remove('btn-ghost');
+      _socialNetwork = btn.dataset.net;
+      if (_socialProduct) _refreshSocialText();
+    });
+  });
+
+  // Compteur de caractères
+  document.getElementById('social-text').addEventListener('input', _updateCharCount);
+
+  // Copier le texte
+  document.getElementById('btn-copy-social-text').addEventListener('click', () => {
+    const text = document.getElementById('social-text').value;
+    navigator.clipboard.writeText(text).then(() => {
+      Utils.toast('Texte copié dans le presse-papier', 'success');
+    });
+  });
+
+  // Copier l'URL image
+  document.getElementById('btn-copy-url').addEventListener('click', () => {
+    const url = document.getElementById('social-img-url').value;
+    if (!url) return;
+    navigator.clipboard.writeText(url).then(() => {
+      Utils.toast('URL copiée', 'success');
+    });
+  });
+
+  // Ouvrir Metricool
+  document.getElementById('btn-open-metricool').addEventListener('click', () => {
+    window.api.shell.openExternal('https://app.metricool.com');
+  });
+}
+
+function _refreshSocialText() {
+  if (!_socialProduct) return;
+  const text = buildSocialText(_socialProduct, _socialNetwork);
+  document.getElementById('social-text').value = text;
+  _updateCharCount();
+}
+
+function _updateCharCount() {
+  const len = document.getElementById('social-text').value.length;
+  document.getElementById('social-char-count').textContent = len;
+}
+
+function openSocialModal(product) {
+  _socialProduct = product;
+  _socialNetwork = 'instagram';
+
+  // Remettre onglet instagram actif
+  document.querySelectorAll('.social-tab-btn').forEach(b => {
+    const isInsta = b.dataset.net === 'instagram';
+    b.classList.toggle('active', isInsta);
+    b.classList.toggle('btn-secondary', isInsta);
+    b.classList.toggle('btn-ghost', !isInsta);
+  });
+
+  // Aperçu photo
+  const preview  = document.getElementById('social-photo-preview');
+  const allPhotos = product.photos?.length > 0
+    ? product.photos
+    : (product.photo ? [{ photo: product.photo }] : []);
+  if (allPhotos.length > 0) {
+    preview.innerHTML = allPhotos.slice(0, 4).map(p =>
+      `<img src="${p.photo}" style="flex:1;min-width:0;height:100%;object-fit:cover;border-radius:4px">`
+    ).join('');
+    preview.style.cssText = 'width:100%;height:120px;border-radius:6px;border:1px solid var(--color-border);display:flex;gap:4px;padding:4px;overflow:hidden;margin-bottom:14px';
+  } else {
+    preview.style.cssText = 'width:100%;height:80px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg-alt);display:flex;align-items:center;justify-content:center;color:var(--color-muted);font-size:13px;margin-bottom:14px';
+    preview.textContent = 'Aucune photo sur ce produit';
+  }
+
+  // URL image Supabase (depuis la 1ère photo publiée si disponible)
+  const imgUrl = allPhotos[0]?.photo || '';
+  const isSupabaseUrl = imgUrl.startsWith('http');
+  const urlGroup = document.getElementById('social-url-group');
+  if (isSupabaseUrl) {
+    document.getElementById('social-img-url').value = imgUrl;
+    urlGroup.style.display = '';
+  } else {
+    urlGroup.style.display = 'none';
+  }
+
+  // Générer le texte
+  _refreshSocialText();
+
+  document.getElementById('modal-social').classList.add('show');
 }
