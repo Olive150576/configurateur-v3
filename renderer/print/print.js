@@ -45,6 +45,8 @@ async function loadCompanyConfig() {
   const keys = [
     'company_name', 'company_trade_name', 'company_address', 'company_city', 'company_zip',
     'company_phone', 'company_email', 'company_siret', 'company_ape', 'company_capital', 'company_vat',
+    'company_legal_form', 'company_rcs_city',
+    'quote_validity_days', 'delivery_weeks', 'payment_modes',
   ];
   const results = await Promise.all(keys.map(k => window.api.app.getConfig(k)));
   const obj = {};
@@ -119,7 +121,7 @@ function renderDocument(doc, company, logo, vatRate) {
     <div class="lines">
       ${renderLinesTable(lines, vatRate)}
     </div>
-    ${renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate)}
+    ${renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate, company)}
     ${renderFooter(company, doc.type)}
   `;
 }
@@ -191,10 +193,16 @@ function renderHeader(doc, company, logo, info) {
 // ==================== COMPANY + CLIENT (two-column) ====================
 
 function renderCompanyClient(company, client) {
+  const siren = company.company_siret ? company.company_siret.replace(/\s/g,'').substring(0,9) : '';
+  const legalLine = [company.company_legal_form, company.company_capital ? 'Capital ' + company.company_capital : ''].filter(Boolean).join(' · ');
+  const rcsLine   = [company.company_rcs_city, siren].filter(Boolean).join(' ');
+
   const companyHtml = `
     <div class="col-company">
       <span class="col-label">Vendeur</span>
       <div class="col-company-name">${esc(company.company_trade_name || company.company_name || '')}</div>
+      ${legalLine ? `<div class="col-company-detail">${esc(legalLine)}</div>` : ''}
+      ${rcsLine   ? `<div class="col-company-detail">RCS ${esc(rcsLine)}</div>` : ''}
       ${company.company_address ? `<div class="col-company-detail">${esc(company.company_address)}</div>` : ''}
       ${(company.company_zip || company.company_city)
         ? `<div class="col-company-detail">${esc([company.company_zip, company.company_city].filter(Boolean).join(' '))}</div>`
@@ -350,7 +358,8 @@ function renderRow(idx, name, qty, unitHT, vatRate, isOption = false, colorRef =
 
 // ==================== TOTALS ====================
 
-function renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate) {
+function renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate, company = {}) {
+  const docType = doc.type;
   const discPct    = doc.discount_percent ?? 0;
   const discAmt    = doc.discount_amount  ?? 0;
   const discLabel  = (discPct > 0 && Number.isInteger(discPct)) ? `Remise ${discPct}%` : 'Remise';
@@ -410,7 +419,17 @@ function renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate) {
 
       <div class="disclaimer-sig-row">
         <div class="disclaimer">
-          Dimensions indicatives ± 2–3 cm · Sous réserve de disponibilité des coloris
+          <div style="margin-bottom:3px"><strong>Conditions</strong></div>
+          ${company && company.quote_validity_days && docType !== 'commande'
+            ? `<div>Devis valable <strong>${esc(company.quote_validity_days)} jours</strong> à compter de sa date d'émission.</div>`
+            : ''}
+          ${company && company.delivery_weeks
+            ? `<div>Délai de livraison estimé : <strong>${esc(company.delivery_weeks)} semaines</strong> après versement de l'acompte et confirmation de commande.</div>`
+            : ''}
+          ${company && company.payment_modes
+            ? `<div>Modes de règlement : ${esc(company.payment_modes)}.</div>`
+            : ''}
+          <div style="margin-top:3px">Dimensions indicatives ± 2–3 cm · Sous réserve de disponibilité des coloris.</div>
         </div>
         <div class="signature-block">
           <div class="signature-label">Bon pour accord</div>
@@ -441,11 +460,12 @@ function renderFooter(company, docType) {
 
   return `
     <div class="doc-footer">
-      ${docType === 'commande' ? `
-        <div style="font-size:8px;color:#6b7280;font-style:italic;margin-bottom:5px;padding:5px 10px;border:1px solid #e5e7eb;border-radius:3px;display:inline-block">
-          Ce bon de commande tient lieu de facture une fois acquitté.
-        </div>
-      ` : ''}
+      <div class="footer-legal-mentions">
+        <strong>Mentions légales —</strong>
+        Réserve de propriété : le transfert de propriété n'intervient qu'après paiement intégral du prix.
+        Garantie légale de conformité (art. L217-1 et s. C.conso., 2 ans) et des vices cachés (art. 1641 et s. C.civ.).
+        ${docType === 'commande' ? 'Ce bon de commande vaut contrat de vente dès acceptation et versement de l'acompte.' : ''}
+      </div>
       <div class="footer-contact-centered">
         ${contactParts.map(esc).join(' · ')}
         ${legalParts.length

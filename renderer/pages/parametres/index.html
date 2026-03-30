@@ -65,6 +65,18 @@
             </div>
             <div class="form-row">
               <div class="form-group">
+                <label class="form-label">Forme juridique</label>
+                <input type="text" id="c-legal-form" class="form-control"
+                  placeholder="ex: SARL, SAS, EURL, Auto-entrepreneur">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Ville d'immatriculation RCS</label>
+                <input type="text" id="c-rcs-city" class="form-control"
+                  placeholder="ex: Lyon">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
                 <label class="form-label">SIRET</label>
                 <input type="text" id="c-siret" class="form-control"
                   placeholder="ex: 12345678900012">
@@ -194,6 +206,25 @@
               <p class="text-sm text-muted" style="margin-top:4px">
                 Un avertissement ⚠️ s'affiche sur les devis validés/envoyés depuis plus de X jours.
               </p>
+            </div>
+            <div class="form-row" style="margin-top:8px">
+              <div class="form-group">
+                <label class="form-label">Validité du devis (jours)</label>
+                <input type="number" id="d-quote-validity" class="form-control"
+                  value="30" min="1" max="365" step="1">
+                <p class="text-sm text-muted" style="margin-top:4px">Apparaît sur le devis : "Valable X jours".</p>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Délai de livraison estimé</label>
+                <input type="text" id="d-delivery-weeks" class="form-control"
+                  placeholder="ex: 8 à 14 semaines">
+                <p class="text-sm text-muted" style="margin-top:4px">Affiché sur le devis et le bon de commande.</p>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top:4px">
+              <label class="form-label">Modes de règlement acceptés</label>
+              <input type="text" id="d-payment-modes" class="form-control"
+                placeholder="ex: Chèque, virement bancaire, carte bancaire">
             </div>
             <div class="form-group" style="margin-top:8px">
               <button class="btn btn-primary" id="btn-save-defaults">Enregistrer</button>

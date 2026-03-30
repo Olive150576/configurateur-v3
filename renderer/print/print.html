@@ -595,12 +595,18 @@
     .disclaimer {
       flex: 1;
       padding-left: 8px;
-      border-left: 2px solid #ebebeb;
+      border-left: 2px solid var(--gold);
       font-size: 7.5px;
-      color: var(--light);
-      line-height: 1.7;
-      font-style: italic;
-      align-self: center;
+      color: var(--gray);
+      line-height: 1.8;
+      align-self: flex-start;
+    }
+
+    .disclaimer strong {
+      font-size: 7px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gold);
     }
 
     .signature-block {
@@ -641,6 +647,18 @@
       padding-top: 4mm;
       border-top: 1px solid var(--border);
       text-align: center;
+    }
+
+    .footer-legal-mentions {
+      font-size: 7px;
+      color: var(--light);
+      line-height: 1.6;
+      font-style: italic;
+      margin-bottom: 3px;
+      padding: 3px 8px;
+      background: #fafafa;
+      border-radius: 2px;
+      text-align: left;
     }
 
     .footer-contact-centered {

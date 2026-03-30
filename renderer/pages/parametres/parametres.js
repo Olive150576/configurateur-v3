@@ -39,11 +39,13 @@ async function loadView(view) {
 
 const COMPANY_KEYS = ['company_name','company_trade_name','company_address','company_city','company_zip',
                       'company_phone','company_email','company_siret','company_ape','company_capital',
-                      'company_vat','vat_rate'];
+                      'company_vat','company_legal_form','company_rcs_city','vat_rate'];
 
 const COMPANY_FIELDS = {
   company_name:       'c-name',
   company_trade_name: 'c-trade-name',
+  company_legal_form: 'c-legal-form',
+  company_rcs_city:   'c-rcs-city',
   company_address:    'c-address',
   company_city:       'c-city',
   company_zip:        'c-zip',
@@ -85,14 +87,20 @@ async function saveCompanySettings() {
 // ==================== VALEURS PAR DÉFAUT ====================
 
 async function loadDefaultSettings() {
-  const [discRes, depRes, alertRes] = await Promise.all([
+  const [discRes, depRes, alertRes, validityRes, deliveryRes, paymentRes] = await Promise.all([
     window.api.app.getConfig('default_discount'),
     window.api.app.getConfig('default_deposit'),
     window.api.app.getConfig('alert_days'),
+    window.api.app.getConfig('quote_validity_days'),
+    window.api.app.getConfig('delivery_weeks'),
+    window.api.app.getConfig('payment_modes'),
   ]);
-  if (discRes.ok  && discRes.data  !== null) document.getElementById('d-discount').value   = discRes.data;
-  if (depRes.ok   && depRes.data   !== null) document.getElementById('d-deposit').value    = depRes.data;
-  if (alertRes.ok && alertRes.data !== null) document.getElementById('d-alert-days').value = alertRes.data;
+  if (discRes.ok    && discRes.data    !== null) document.getElementById('d-discount').value       = discRes.data;
+  if (depRes.ok     && depRes.data     !== null) document.getElementById('d-deposit').value         = depRes.data;
+  if (alertRes.ok   && alertRes.data   !== null) document.getElementById('d-alert-days').value      = alertRes.data;
+  if (validityRes.ok && validityRes.data !== null) document.getElementById('d-quote-validity').value = validityRes.data;
+  if (deliveryRes.ok && deliveryRes.data !== null) document.getElementById('d-delivery-weeks').value = deliveryRes.data;
+  if (paymentRes.ok  && paymentRes.data  !== null) document.getElementById('d-payment-modes').value  = paymentRes.data;
 
   document.getElementById('btn-save-defaults').onclick = saveDefaultSettings;
 }
@@ -102,9 +110,12 @@ async function saveDefaultSettings() {
   btn.disabled = true;
 
   await Promise.all([
-    window.api.app.setConfig('default_discount', document.getElementById('d-discount').value),
-    window.api.app.setConfig('default_deposit',  document.getElementById('d-deposit').value),
-    window.api.app.setConfig('alert_days',        document.getElementById('d-alert-days').value),
+    window.api.app.setConfig('default_discount',    document.getElementById('d-discount').value),
+    window.api.app.setConfig('default_deposit',     document.getElementById('d-deposit').value),
+    window.api.app.setConfig('alert_days',          document.getElementById('d-alert-days').value),
+    window.api.app.setConfig('quote_validity_days', document.getElementById('d-quote-validity').value),
+    window.api.app.setConfig('delivery_weeks',      document.getElementById('d-delivery-weeks').value),
+    window.api.app.setConfig('payment_modes',       document.getElementById('d-payment-modes').value),
   ]);
 
   btn.disabled = false;
