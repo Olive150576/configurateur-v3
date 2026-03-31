@@ -621,7 +621,7 @@ function handleAddConfig() {
       const paPrice   = m.prices?.[state.cfg.rangeId] ?? 0;
       const sellPrice = round2(paPrice * coeff);
       const mQty      = state.cfg.modules[m.id].qty;
-      return { id: m.id, name: m.name, description: m.description || '', dimensions: m.dimensions || '', qty: mQty, unit_price: sellPrice, total: round2(sellPrice * mQty) };
+      return { id: m.id, name: m.name, description: m.description || '', dimensions: m.dimensions || '', eco_participation: m.eco_participation || 0, qty: mQty, unit_price: sellPrice, total: round2(sellPrice * mQty) };
     });
 
   // Options sélectionnées (prix = PA × coeff option ou coeff produit)
