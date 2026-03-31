@@ -62,7 +62,9 @@ function runMigrations() {
   for (const migration of migrations) {
     if (!applied.includes(migration.version)) {
       console.log(`⚙️  Migration ${migration.version}...`);
+      db.pragma('foreign_keys = OFF');
       db.exec(migration.sql);
+      db.pragma('foreign_keys = ON');
       db.prepare('INSERT INTO schema_migrations (version) VALUES (?)').run(migration.version);
       console.log(`✓ Migration ${migration.version} appliquée`);
     }

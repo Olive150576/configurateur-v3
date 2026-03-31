@@ -18,9 +18,9 @@ function getAll(filters = {}) {
   const db = getDb();
 
   let query = `
-    SELECT d.*, c.name as client_name
+    SELECT d.*,
+      json_extract(d.client_snapshot, '$.name') as client_name
     FROM documents d
-    LEFT JOIN clients c ON d.client_id = c.id
     WHERE 1=1
   `;
   const params = [];
@@ -45,9 +45,9 @@ function getAll(filters = {}) {
 function getById(id) {
   const db = getDb();
   const doc = db.prepare(`
-    SELECT d.*, c.name as client_name
+    SELECT d.*,
+      json_extract(d.client_snapshot, '$.name') as client_name
     FROM documents d
-    LEFT JOIN clients c ON d.client_id = c.id
     WHERE d.id = ?
   `).get(id);
 
