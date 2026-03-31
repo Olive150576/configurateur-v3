@@ -216,13 +216,16 @@ async function update(id, data) {
   }).eq('id', id);
   if (pErr) sbErr(pErr);
 
-  // 2. Gammes
+  // 2. Gammes — avec remapping d'IDs pour les prix de modules
+  const rangeIdMap = {};
   if (data.ranges) {
     await sb.from('ranges').delete().eq('product_id', id);
     for (let i = 0; i < data.ranges.length; i++) {
       const r = data.ranges[i];
+      const newRangeId = r.id || generateId('range');
+      rangeIdMap[r.id] = newRangeId;
       const { error: rErr } = await sb.from('ranges').insert({
-        id: r.id || generateId('range'), product_id: id,
+        id: newRangeId, product_id: id,
         name: r.name.trim(), base_price: r.base_price,
         dimensions: r.dimensions?.trim() || '', sort_order: i,
         eco_participation: r.eco_participation ?? 0,
@@ -231,7 +234,7 @@ async function update(id, data) {
     }
   }
 
-  // 3. Modules + prix
+  // 3. Modules + prix — range_id remappés via rangeIdMap
   if (data.modules) {
     await sb.from('modules').delete().eq('product_id', id);
     for (let i = 0; i < data.modules.length; i++) {
@@ -245,9 +248,13 @@ async function update(id, data) {
       });
       if (mErr) sbErr(mErr);
 
-      const priceRows = Object.entries(m.prices || {}).map(([rangeId, price]) => ({
-        module_id: moduleId, range_id: rangeId, price,
-      }));
+      const priceRows = Object.entries(m.prices || {})
+        .filter(([origRangeId]) => rangeIdMap[origRangeId] || !data.ranges)
+        .map(([origRangeId, price]) => ({
+          module_id: moduleId,
+          range_id: rangeIdMap[origRangeId] ?? origRangeId,
+          price,
+        }));
       if (priceRows.length > 0) {
         const { error: mpErr } = await sb.from('module_prices').insert(priceRows);
         if (mpErr) sbErr(mpErr);
