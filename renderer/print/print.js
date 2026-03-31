@@ -270,17 +270,15 @@ function renderLinesTable(lines, vatRate) {
       const ecoTTC = r2((line.unit_price ?? 0) * (line.qty || 1) * (1 + vatRate / 100));
       rows.push(`
         <tr class="eco-row">
-          <td class="td-num" style="color:#15803d">♻</td>
+          <td class="td-num" style="color:#9ca3af;font-size:9px">♻</td>
           <td class="td-desig">
-            <div class="desig-main" style="color:#15803d">Éco-participation (Éco-mobilier)</div>
-            <div class="desig-eco-badge">Non remisable</div>
+            <span style="font-size:10px;color:#6b7280;font-style:italic">Éco-participation Éco-mobilier — non remisable</span>
           </td>
-          <td class="td-qty">${line.qty || 1}</td>
-          <td class="td-pu">${formatAmount(line.unit_price ?? 0)}<span class="td-pu-label">€ HT</span></td>
-          <td class="td-tva">${vatRate}%</td>
-          <td class="td-total">
-            <span class="td-total-ttc">${formatAmount(ecoTTC)}</span>
-            <span class="td-total-label">€ TTC</span>
+          <td class="td-qty" style="color:#9ca3af;font-size:10px">${line.qty || 1}</td>
+          <td class="td-pu" style="color:#9ca3af;font-size:10px">${formatAmount(line.unit_price ?? 0)}<span class="td-pu-label">€ HT</span></td>
+          <td class="td-tva" style="color:#9ca3af;font-size:10px">${vatRate}%</td>
+          <td class="td-total" style="color:#6b7280;font-size:10px">
+            ${formatAmount(ecoTTC)}<span class="td-total-label">€ TTC</span>
           </td>
         </tr>`);
       return;
