@@ -7,6 +7,7 @@ function register(ipcMain) {
   ipcMain.handle('suppliers:update',       (_, id, data)=> wrap(() => SupplierService.update(id, data)));
   ipcMain.handle('suppliers:search',       (_, term)    => wrap(() => SupplierService.search(term)));
   ipcMain.handle('suppliers:archive',      (_, id)      => wrap(() => SupplierService.archive(id)));
+  ipcMain.handle('suppliers:remove',       (_, id)      => wrap(() => SupplierService.remove(id)));
 }
 
 module.exports = { register };

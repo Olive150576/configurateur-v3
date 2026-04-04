@@ -41,13 +41,25 @@
       padding-top: 56px;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+      transition: padding-top 0.15s;
     }
 
     @media print {
       .toolbar { display: none !important; }
+      .filter-panel { display: none !important; }
       body { background: white; padding-top: 0; }
-      .cat-page { break-after: page; box-shadow: none; margin: 0; }
+      .cat-page {
+        break-after: page;
+        box-shadow: none;
+        margin: 0;
+        height: auto;
+        min-height: 297mm;
+        overflow: visible;
+      }
       .cat-page:last-child { break-after: avoid; }
+      /* flex:0 0 auto = taille déterminée par le contenu, pas par le flex parent */
+      .cat-body { overflow: visible; flex: 0 0 auto; }
+      .modules-table tr { break-inside: avoid; }
     }
 
     @page { size: A4 portrait; margin: 0; }
@@ -156,6 +168,32 @@
     .cat-footer-center { font-size: 7px; font-weight: 700; color: var(--gold); letter-spacing: 1.5px; text-transform: uppercase; text-align: center; }
     .cat-footer-right { font-size: 7px; color: var(--light); text-align: right; line-height: 1.5; }
 
+    /* ── FILTER PANEL ── */
+    .filter-panel {
+      position: fixed; top: 48px; left: 0; right: 0; z-index: 999;
+      background: #fff; border-bottom: 2px solid #e8c97e;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      padding: 12px 20px 16px;
+      display: none;
+    }
+    .filter-panel.open { display: block; }
+    .filter-panel-title {
+      font-size: 11px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: #c8a96e; margin-bottom: 10px;
+    }
+    .filter-products {
+      display: flex; flex-wrap: wrap; gap: 8px; max-height: 200px; overflow-y: auto; margin-bottom: 12px;
+    }
+    .filter-product-item {
+      display: flex; align-items: center; gap: 6px;
+      background: #f7f5f0; border: 1px solid #e0d9cc;
+      padding: 4px 10px; font-size: 12px; cursor: pointer;
+      user-select: none;
+    }
+    .filter-product-item input { cursor: pointer; }
+    .filter-actions { display: flex; gap: 8px; align-items: center; }
+    .filter-count { font-size: 11px; color: #999; margin-left: auto; }
+
     /* ── LOADING / EMPTY ── */
     #loading { padding: 60px; text-align: center; color: #999; font-size: 14px; }
   </style>
@@ -166,9 +204,21 @@
     <span class="toolbar-title" id="toolbar-title">Catalogue produits</span>
     <span class="toolbar-info" id="toolbar-info"></span>
     <div class="toolbar-actions">
+      <button class="tbtn tbtn-close" id="btn-filter" style="background:rgba(200,169,110,0.2);color:#c8a96e">▼ Sélectionner</button>
       <button class="tbtn tbtn-pdf"   id="btn-save-pdf">📄 Sauvegarder PDF</button>
       <button class="tbtn tbtn-print" id="btn-print">🖨 Imprimer</button>
       <button class="tbtn tbtn-close" id="btn-close">✕ Fermer</button>
+    </div>
+  </div>
+
+  <div class="filter-panel" id="filter-panel">
+    <div class="filter-panel-title">Sélectionner les produits à imprimer</div>
+    <div class="filter-products" id="filter-products"></div>
+    <div class="filter-actions">
+      <button class="tbtn" id="btn-select-all"   style="background:#f0ebe0;color:#1a1a1a;font-size:11px">Tout cocher</button>
+      <button class="tbtn" id="btn-deselect-all" style="background:#f0ebe0;color:#1a1a1a;font-size:11px">Tout décocher</button>
+      <button class="tbtn tbtn-pdf" id="btn-apply-filter" style="font-size:11px">Appliquer</button>
+      <span class="filter-count" id="filter-count"></span>
     </div>
   </div>
 

@@ -19,6 +19,10 @@ const CONFIG_KEYS = [
   'company_logo', 'vat_rate',
 ];
 
+// ── State ─────────────────────────────────────────────────────────────────────
+
+let allProducts = [];
+
 // ── Toolbar ───────────────────────────────────────────────────────────────────
 
 document.getElementById('btn-close').addEventListener('click', () => window.close());
@@ -31,6 +35,59 @@ document.getElementById('btn-save-pdf').addEventListener('click', async () => {
     await window.api.print.savePDF(`${title}.pdf`);
   } finally { btn.disabled = false; }
 });
+
+// ── Filter panel ──────────────────────────────────────────────────────────────
+
+document.getElementById('btn-filter').addEventListener('click', () => {
+  document.getElementById('filter-panel').classList.toggle('open');
+});
+
+document.getElementById('btn-select-all').addEventListener('click', () => {
+  document.querySelectorAll('#filter-products input[type=checkbox]').forEach(cb => cb.checked = true);
+  updateFilterCount();
+});
+
+document.getElementById('btn-deselect-all').addEventListener('click', () => {
+  document.querySelectorAll('#filter-products input[type=checkbox]').forEach(cb => cb.checked = false);
+  updateFilterCount();
+});
+
+document.getElementById('btn-apply-filter').addEventListener('click', () => {
+  const selected = getSelectedIds();
+  const filtered = allProducts.filter(p => selected.has(p.id));
+  const vatRate = parseFloat(document.getElementById('filter-panel').dataset.vatRate) || 20;
+  const company = JSON.parse(document.getElementById('filter-panel').dataset.company || '{}');
+  renderCatalogue(filtered, company, vatRate);
+  document.getElementById('filter-panel').classList.remove('open');
+  document.getElementById('toolbar-info').textContent =
+    `${filtered.length} produit${filtered.length > 1 ? 's' : ''}`;
+});
+
+function populateFilterPanel(products, company, vatRate) {
+  const container = document.getElementById('filter-products');
+  container.innerHTML = products.map(p => `
+    <label class="filter-product-item">
+      <input type="checkbox" value="${escHtml(p.id)}" checked>
+      ${escHtml(p.name)}${p.collection ? ` <span style="color:#bbb;font-size:10px">${escHtml(p.collection)}</span>` : ''}
+    </label>
+  `).join('');
+  container.querySelectorAll('input').forEach(cb => cb.addEventListener('change', updateFilterCount));
+  document.getElementById('filter-panel').dataset.vatRate = vatRate;
+  document.getElementById('filter-panel').dataset.company = JSON.stringify(company);
+  updateFilterCount();
+}
+
+function updateFilterCount() {
+  const total    = document.querySelectorAll('#filter-products input').length;
+  const selected = document.querySelectorAll('#filter-products input:checked').length;
+  document.getElementById('filter-count').textContent = `${selected} / ${total} sélectionné(s)`;
+}
+
+function getSelectedIds() {
+  const ids = new Set();
+  document.querySelectorAll('#filter-products input:checked').forEach(cb => ids.add(cb.value));
+  return ids;
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
@@ -73,6 +130,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('toolbar-title').textContent = `Catalogue — ${supplierName}`;
     document.getElementById('toolbar-info').textContent  = `${products.length} produit${products.length > 1 ? 's' : ''}`;
 
+    allProducts = products;
+    populateFilterPanel(products, company, vatRate);
     renderCatalogue(products, company, vatRate);
 
   } catch (e) {

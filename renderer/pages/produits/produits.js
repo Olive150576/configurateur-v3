@@ -1117,6 +1117,7 @@ function normalizeProductFromV2(p) {
     name: r.name,
     base_price: r.basePrice ?? r.base_price ?? 0,
     dimensions: r.dimensions || '',
+    eco_participation: r.eco_participation ?? r.ecoParticipation ?? 0,
   }));
 
   const modules = (p.modules || []).map(m => ({
@@ -1124,6 +1125,7 @@ function normalizeProductFromV2(p) {
     name: m.name,
     description: m.description || '',
     dimensions: m.dimensions || '',
+    eco_participation: m.eco_participation ?? m.ecoParticipation ?? 0,
     prices: m.priceByRange || m.prices || {},
   }));
 
@@ -1133,14 +1135,20 @@ function normalizeProductFromV2(p) {
     description: o.description || '',
     price: o.price ?? 0,
     type: o.type || '',
+    coefficient: o.coefficient ?? null,
   }));
 
   return {
     id: p.id,
     name: p.name,
-    supplier_id: null, // sera résolu via findOrCreate si nécessaire
+    supplier_id: null,
     collection: p.collection || '',
     description: p.description || '',
+    purchase_coefficient: p.purchase_coefficient ?? p.purchaseCoefficient ?? 2.0,
+    price_rounding: p.price_rounding ?? p.priceRounding ?? 'none',
+    eco_participation: p.eco_participation ?? p.ecoParticipation ?? 0,
+    photo: p.photo || '',
+    supplier_notes: p.supplier_notes ?? p.supplierNotes ?? '',
     ranges, modules, options,
   };
 }

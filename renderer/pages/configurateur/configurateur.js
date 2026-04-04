@@ -75,7 +75,7 @@ function setupHeader() {
     document.getElementById('deposit-mode-pct').classList.add('active');
     document.getElementById('deposit-mode-eur').classList.remove('active');
     const inp = document.getElementById('f-deposit');
-    inp.max = 100; inp.step = 1; inp.value = 30;
+    inp.max = 100; inp.step = 1; inp.value = 0;
     recalcDevisTotals();
   });
   document.getElementById('deposit-mode-eur').addEventListener('click', () => {
@@ -455,7 +455,10 @@ function renderConfigModules() {
       <div class="module-row ${ms.selected ? 'selected' : ''}" id="mrow-${m.id}">
         <input type="checkbox" ${ms.selected ? 'checked' : ''}
           data-module-id="${m.id}" data-action="toggle-module">
-        <span class="module-row-name">${Utils.escapeHtml(m.name)}</span>
+        <div>
+          <span class="module-row-name">${Utils.escapeHtml(m.name)}</span>
+          ${m.dimensions ? `<div style="font-size:11px;color:var(--color-gray-400)">${Utils.escapeHtml(m.dimensions)}</div>` : ''}
+        </div>
         <div class="module-row-price" style="text-align:right">
           <div>${Utils.formatPrice(sellPrice)}</div>
         </div>
@@ -614,30 +617,36 @@ function handleAddConfig() {
   const mode   = product.price_rounding ?? 'none';
   const qty    = Math.max(1, parseInt(document.getElementById('config-qty').value) || 1);
 
-  // Modules sélectionnés (prix = PA × coeff, avant arrondi global)
+  // Modules sélectionnés — unit_price stocké en HT pour print.js, mais TTC accumulé pour unitPriceTTC
+  let modulesTTC = 0;
   const selectedModules = product.modules
     .filter(m => state.cfg.modules[m.id]?.selected)
     .map(m => {
-      const paPrice   = m.prices?.[state.cfg.rangeId] ?? 0;
-      const sellPrice = round2(paPrice * coeff);
-      const mQty      = state.cfg.modules[m.id].qty;
-      return { id: m.id, name: m.name, description: m.description || '', dimensions: m.dimensions || '', eco_participation: m.eco_participation || 0, qty: mQty, unit_price: sellPrice, total: round2(sellPrice * mQty) };
+      const paPrice  = m.prices?.[state.cfg.rangeId] ?? 0;
+      const sellTTC  = applyRounding(round2(paPrice * coeff), mode);
+      const sellHT   = round2(sellTTC / (1 + state.vatRate / 100));
+      const mQty     = state.cfg.modules[m.id].qty;
+      modulesTTC    += sellTTC * mQty;
+      return { id: m.id, name: m.name, description: m.description || '', dimensions: m.dimensions || '', eco_participation: m.eco_participation || 0, qty: mQty, unit_price: sellHT, total: round2(sellHT * mQty) };
     });
+  modulesTTC = round2(modulesTTC);
 
-  // Options sélectionnées (prix = PA × coeff option ou coeff produit)
+  // Options sélectionnées — price stocké en HT pour print.js, TTC accumulé pour unitPriceTTC
+  let optionsTTC = 0;
   const selectedOptions = product.options
     .filter(o => (state.cfg.options[o.id] || 0) > 0)
     .map(o => {
-      const oQty   = state.cfg.options[o.id];
-      const oCoeff = o.coefficient != null ? o.coefficient : coeff;
-      const pvPrc  = round2(o.price * oCoeff);
-      return { id: o.id, name: o.name, description: o.description || '', qty: oQty, price: pvPrc, total: round2(pvPrc * oQty) };
+      const oQty    = state.cfg.options[o.id];
+      const oCoeff  = o.coefficient != null ? o.coefficient : coeff;
+      const pvTTC   = applyRounding(round2(o.price * oCoeff), mode);
+      const pvHT    = round2(pvTTC / (1 + state.vatRate / 100));
+      optionsTTC   += pvTTC * oQty;
+      return { id: o.id, name: o.name, description: o.description || '', qty: oQty, price: pvHT, total: round2(pvHT * oQty) };
     });
+  optionsTTC = round2(optionsTTC);
 
-  const modulesTotal   = selectedModules.reduce((s, m) => s + m.total, 0);
-  const optionsTotal   = selectedOptions.reduce((s, o) => s + o.total, 0);
   // PA × coeff = TTC (arrondi), puis HT = TTC / (1 + TVA%)
-  const unitPriceTTC   = applyRounding(round2(base * coeff) + modulesTotal + optionsTotal, mode);
+  const unitPriceTTC   = applyRounding(round2(base * coeff) + modulesTTC + optionsTTC, mode);
   const unitPrice      = round2(unitPriceTTC / (1 + state.vatRate / 100));
   const lineTotal      = round2(unitPrice * qty);
 
