@@ -45,9 +45,8 @@ function setupModal() {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
     const id = btn.dataset.id;
-    if (btn.dataset.action === 'view-supplier')   openViewModal(id);
-    if (btn.dataset.action === 'edit-supplier')   editSupplier(id);
-    if (btn.dataset.action === 'delete-supplier') confirmDeleteSupplier(id);
+    if (btn.dataset.action === 'view-supplier') openViewModal(id);
+    if (btn.dataset.action === 'edit-supplier') editSupplier(id);
   });
 
   // Fermeture via attribut data-close-modal
@@ -143,8 +142,6 @@ function renderTable(suppliers) {
             data-action="view-supplier" data-id="${s.id}">👁</button>
           <button class="btn btn-ghost btn-sm btn-icon" title="Modifier"
             data-action="edit-supplier" data-id="${s.id}">✏️</button>
-          <button class="btn btn-ghost btn-sm btn-icon" title="Supprimer"
-            data-action="delete-supplier" data-id="${s.id}">🗑️</button>
         </div>
       </td>
     `;
@@ -339,25 +336,4 @@ function openViewModal(supplierId) {
   };
 
   document.getElementById('modal-view').classList.add('show');
-}
-
-// ==================== SUPPRESSION ====================
-
-async function confirmDeleteSupplier(supplierId) {
-  const supplier = state.suppliers.find(s => s.id === supplierId);
-  if (!supplier) return;
-
-  const confirmed = window.confirm(
-    `Supprimer le fournisseur "${supplier.name}" ?\n\nCette action est irréversible.`
-  );
-  if (!confirmed) return;
-
-  const res = await window.api.suppliers.remove(supplierId);
-  if (!res.ok) {
-    Utils.toast(res.error || 'Erreur lors de la suppression', 'error');
-    return;
-  }
-
-  Utils.toast('Fournisseur supprimé', 'success');
-  await loadSuppliers();
 }

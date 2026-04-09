@@ -19,10 +19,6 @@ const CONFIG_KEYS = [
   'company_logo', 'vat_rate',
 ];
 
-// ── State ─────────────────────────────────────────────────────────────────────
-
-let allProducts = [];
-
 // ── Toolbar ───────────────────────────────────────────────────────────────────
 
 document.getElementById('btn-close').addEventListener('click', () => window.close());
@@ -35,59 +31,6 @@ document.getElementById('btn-save-pdf').addEventListener('click', async () => {
     await window.api.print.savePDF(`${title}.pdf`);
   } finally { btn.disabled = false; }
 });
-
-// ── Filter panel ──────────────────────────────────────────────────────────────
-
-document.getElementById('btn-filter').addEventListener('click', () => {
-  document.getElementById('filter-panel').classList.toggle('open');
-});
-
-document.getElementById('btn-select-all').addEventListener('click', () => {
-  document.querySelectorAll('#filter-products input[type=checkbox]').forEach(cb => cb.checked = true);
-  updateFilterCount();
-});
-
-document.getElementById('btn-deselect-all').addEventListener('click', () => {
-  document.querySelectorAll('#filter-products input[type=checkbox]').forEach(cb => cb.checked = false);
-  updateFilterCount();
-});
-
-document.getElementById('btn-apply-filter').addEventListener('click', () => {
-  const selected = getSelectedIds();
-  const filtered = allProducts.filter(p => selected.has(p.id));
-  const vatRate = parseFloat(document.getElementById('filter-panel').dataset.vatRate) || 20;
-  const company = JSON.parse(document.getElementById('filter-panel').dataset.company || '{}');
-  renderCatalogue(filtered, company, vatRate);
-  document.getElementById('filter-panel').classList.remove('open');
-  document.getElementById('toolbar-info').textContent =
-    `${filtered.length} produit${filtered.length > 1 ? 's' : ''}`;
-});
-
-function populateFilterPanel(products, company, vatRate) {
-  const container = document.getElementById('filter-products');
-  container.innerHTML = products.map(p => `
-    <label class="filter-product-item">
-      <input type="checkbox" value="${escHtml(p.id)}" checked>
-      ${escHtml(p.name)}${p.collection ? ` <span style="color:#bbb;font-size:10px">${escHtml(p.collection)}</span>` : ''}
-    </label>
-  `).join('');
-  container.querySelectorAll('input').forEach(cb => cb.addEventListener('change', updateFilterCount));
-  document.getElementById('filter-panel').dataset.vatRate = vatRate;
-  document.getElementById('filter-panel').dataset.company = JSON.stringify(company);
-  updateFilterCount();
-}
-
-function updateFilterCount() {
-  const total    = document.querySelectorAll('#filter-products input').length;
-  const selected = document.querySelectorAll('#filter-products input:checked').length;
-  document.getElementById('filter-count').textContent = `${selected} / ${total} sélectionné(s)`;
-}
-
-function getSelectedIds() {
-  const ids = new Set();
-  document.querySelectorAll('#filter-products input:checked').forEach(cb => ids.add(cb.value));
-  return ids;
-}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
@@ -130,8 +73,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('toolbar-title').textContent = `Catalogue — ${supplierName}`;
     document.getElementById('toolbar-info').textContent  = `${products.length} produit${products.length > 1 ? 's' : ''}`;
 
-    allProducts = products;
-    populateFilterPanel(products, company, vatRate);
     renderCatalogue(products, company, vatRate);
 
   } catch (e) {
@@ -144,42 +85,82 @@ function showError(msg) {
     `<div style="color:#c00;padding:40px;text-align:center">${escHtml(msg)}</div>`;
 }
 
-// ── Rendu principal — 1 page par produit ──────────────────────────────────────
+// ── Constantes de pagination ──────────────────────────────────────────────────
+
+/** Nombre max de lignes modules sur la 1re page (qui contient photo + description) */
+const ROWS_PAGE1 = 20;
+/** Nombre max de lignes modules sur les pages de suite (pas de photo) */
+const ROWS_NEXT  = 30;
+
+// ── Rendu principal — pagination automatique par produit ──────────────────────
 
 function renderCatalogue(products, company, vatRate) {
   const pagesEl     = document.getElementById('catalogue-pages');
   const companyName = company.company_trade_name || company.company_name || '';
   const logo        = company.company_logo || '';
-  const total       = products.length;
 
   pagesEl.innerHTML = '';
 
+  // Pré-calcul du nombre total de pages A4
+  let totalPages = 0;
+  const pageCounts = products.map(p => {
+    const n     = (p.modules || []).length;
+    const pages = n <= ROWS_PAGE1 ? 1 : 1 + Math.ceil((n - ROWS_PAGE1) / ROWS_NEXT);
+    totalPages += pages;
+    return pages;
+  });
+
+  let globalPage = 0;
+
   products.forEach((p, idx) => {
-    const pageEl = document.createElement('div');
-    pageEl.className = 'cat-page';
-    pageEl.innerHTML = renderProductPage(p, company, logo, companyName, vatRate, idx + 1, total);
-    pagesEl.appendChild(pageEl);
+    const coeff    = parseFloat(p.purchase_coefficient) || 2;
+    const rounding = p.price_rounding || 'none';
+    const modules  = p.modules || [];
+    const options  = p.options || [];
+    const ranges   = (p.ranges || []).map(r => ({
+      ...r,
+      saleTTC: applyRounding(parseFloat(r.base_price) * coeff, rounding),
+    }));
+    const numPages = pageCounts[idx];
+
+    // Page 1 — avec photo + description
+    globalPage++;
+    const firstBatch = modules.slice(0, ROWS_PAGE1);
+    const isOnly     = numPages === 1;
+    const p1 = document.createElement('div');
+    p1.className = 'cat-page';
+    p1.innerHTML = buildPage(
+      p, company, logo, companyName, coeff, rounding, ranges,
+      firstBatch, isOnly ? options : [],
+      globalPage, totalPages, true
+    );
+    pagesEl.appendChild(p1);
+
+    // Pages de suite — sans photo
+    let remaining = modules.slice(ROWS_PAGE1);
+    while (remaining.length > 0) {
+      globalPage++;
+      const isLast = remaining.length <= ROWS_NEXT;
+      const batch  = remaining.slice(0, ROWS_NEXT);
+      remaining    = remaining.slice(ROWS_NEXT);
+      const pn = document.createElement('div');
+      pn.className = 'cat-page';
+      pn.innerHTML = buildPage(
+        p, company, logo, companyName, coeff, rounding, ranges,
+        batch, isLast ? options : [],
+        globalPage, totalPages, false
+      );
+      pagesEl.appendChild(pn);
+    }
   });
 
   document.getElementById('loading').style.display = 'none';
   pagesEl.style.display = 'flex';
 }
 
-// ── Page produit ──────────────────────────────────────────────────────────────
+// ── Construction d'une page A4 ────────────────────────────────────────────────
 
-function renderProductPage(p, company, logo, companyName, vatRate, pageNum, total) {
-  const coeff    = parseFloat(p.purchase_coefficient) || 2;
-  const rounding = p.price_rounding || 'none';
-
-  const ranges = (p.ranges || []).map(r => ({
-    ...r,
-    // PA × coeff = prix TTC direct
-    saleTTC: applyRounding(parseFloat(r.base_price) * coeff, rounding),
-  }));
-
-  const modules = p.modules || [];
-  const options = p.options || [];
-
+function buildPage(p, company, logo, companyName, coeff, rounding, ranges, modules, options, pageNum, total, isFirstPage) {
   const descLines = (p.description || '')
     .split('\n')
     .map(l => l.replace(/^[-–—•]\s*/, '').trim())
@@ -191,6 +172,7 @@ function renderProductPage(p, company, logo, companyName, vatRate, pageNum, tota
 
     <div class="cat-body">
 
+      ${isFirstPage ? `
       <!-- PHOTO + DESCRIPTION -->
       <div class="cat-top">
         <div class="cat-photo">
@@ -206,12 +188,12 @@ function renderProductPage(p, company, logo, companyName, vatRate, pageNum, tota
                </ul>`
             : `<p style="font-size:11px;color:#bbb;font-style:italic">Aucune description.</p>`}
         </div>
-      </div>
+      </div>` : ''}
 
       <!-- MODULES -->
       ${modules.length ? `
       <div class="cat-modules">
-        <div class="cat-section-title">Modules disponibles</div>
+        <div class="cat-section-title">Modules disponibles${!isFirstPage ? ' (suite)' : ''}</div>
         <table class="modules-table">
           <thead>
             <tr>

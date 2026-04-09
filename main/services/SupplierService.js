@@ -122,19 +122,4 @@ async function archive(id) {
   log('supplier', id, 'archived');
 }
 
-async function remove(id) {
-  const sb = getSupabase();
-  // Vérifier s'il y a des produits liés
-  const { count, error: countErr } = await sb
-    .from('products')
-    .select('id', { count: 'exact', head: true })
-    .eq('supplier_id', id);
-  if (countErr) sbErr(countErr);
-  if (count > 0) throw new Error(`Impossible de supprimer : ${count} produit(s) sont liés à ce fournisseur.`);
-
-  const { error } = await sb.from('suppliers').delete().eq('id', id);
-  if (error) sbErr(error);
-  log('supplier', id, 'deleted');
-}
-
-module.exports = { getAll, getById, findByName, findOrCreate, create, update, search, archive, remove };
+module.exports = { getAll, getById, findByName, findOrCreate, create, update, search, archive };

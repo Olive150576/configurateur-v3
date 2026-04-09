@@ -38,7 +38,6 @@ contextBridge.exposeInMainWorld('api', {
     update:       (id, data) => ipcRenderer.invoke('suppliers:update', id, data),
     search:       (term)     => ipcRenderer.invoke('suppliers:search', term),
     archive:      (id)       => ipcRenderer.invoke('suppliers:archive', id),
-    remove:       (id)       => ipcRenderer.invoke('suppliers:remove', id),
   },
 
   // ==================== DOCUMENTS ====================

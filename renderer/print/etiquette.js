@@ -131,7 +131,8 @@ function render(product, company, qrDataUrl = '') {
   const descLines = (product.description || '')
     .split('\n')
     .map(l => l.replace(/^[-–—•]\s*/, '').trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .slice(0, 10);
 
   // 3 premières options du produit pour la section "Options disponibles"
   const options       = (product.options || []).slice(0, 3);
@@ -350,7 +351,6 @@ function renderTile(tile) {
 
   return `
     <div class="price-card">
-      <div class="card-schema">${getModuleSVG(tile.title)}</div>
       <div class="card-name">${titleWithEmojis(tile.title)}</div>
       ${tile.dimensions ? `<div class="card-dims">${escHtml(tile.dimensions)}</div>` : ''}
       <hr class="card-sep">
