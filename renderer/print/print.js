@@ -265,53 +265,38 @@ function renderLinesTable(lines, vatRate) {
       return;
     }
 
-    // Ligne éco-participation
-    if (line.is_eco) {
-      const ecoTTC = r2((line.unit_price ?? 0) * (line.qty || 1) * (1 + vatRate / 100));
-      rows.push(`
-        <tr class="eco-row">
-          <td class="td-num" style="color:#9ca3af;font-size:9px">♻</td>
-          <td class="td-desig">
-            <span style="font-size:10px;color:#6b7280;font-style:italic">Éco-participation Éco-mobilier — non remisable</span>
-          </td>
-          <td class="td-qty" style="color:#9ca3af;font-size:10px">${line.qty || 1}</td>
-          <td class="td-pu" style="color:#9ca3af;font-size:10px">${formatAmount(line.unit_price ?? 0)}<span class="td-pu-label">€ HT</span></td>
-          <td class="td-tva" style="color:#9ca3af;font-size:10px">${vatRate}%</td>
-          <td class="td-total" style="color:#6b7280;font-size:10px">
-            ${formatAmount(ecoTTC)}<span class="td-total-label">€ TTC</span>
-          </td>
-        </tr>`);
-      return;
-    }
+    // Anciennes lignes éco séparées — ignorées (éco désormais incluse dans le prix)
+    if (line.is_eco) return;
 
     const colorRef    = line.color_ref || '';
     const productDesc = line.product_config?.product_description || '';
+    const ecoHT       = line.product_config?.eco_ht ?? 0;
     const lineQty     = line.qty || 1;
-    const lineTotalTTC = r2((line.unit_price ?? 0) * lineQty * (1 + vatRate / 100));
 
-    // En-tête de groupe (désignation produit + quantité + total TTC)
+    // En-tête de groupe (désignation produit + quantité)
     if (modules.length > 0 || options.length > 0) {
       const desig = (line.designation || '').replace(' — ', ' · ');
-      rows.push(renderGroupHeader(desig, lineQty, lineTotalTTC, lineIdx === 0));
+      rows.push(renderGroupHeader(desig, lineQty, ecoHT, lineIdx === 0));
     }
 
     if (modules.length > 0) {
       // Un article = un module → une ligne par module
-      modules.forEach((mod, i) => {
-        // Description produit sur le 1er module uniquement
-        const extraDesc = i === 0 && productDesc ? productDesc : '';
+      // mod.unit_price est stocké en TTC (PA × coeff) → convertir en HT pour renderRow
+      modules.forEach((mod) => {
         const modDesc   = [mod.dimensions, mod.description].filter(Boolean).join(' — ');
-        rows.push(renderRow(idx++, mod.name, mod.qty || 1, mod.unit_price, vatRate, false, colorRef, modDesc, extraDesc));
+        const modUnitHT = r2((mod.unit_price ?? 0) / (1 + vatRate / 100));
+        rows.push(renderRow(idx++, mod.name, mod.qty || 1, modUnitHT, vatRate, false, colorRef, modDesc, ''));
       });
-      // Options éventuelles (supplément)
+      // Options éventuelles (supplément) — opt.price aussi en TTC
       options.forEach(opt => {
-        rows.push(renderRow(idx++, opt.name, opt.qty || 1, opt.price, vatRate, true, '', opt.description || '', ''));
+        const optUnitHT = r2((opt.price ?? 0) / (1 + vatRate / 100));
+        rows.push(renderRow(idx++, opt.name, opt.qty || 1, optUnitHT, vatRate, true, '', opt.description || '', ''));
       });
     } else {
       // Pas de modules → la ligne entière
       const desig    = (line.designation || '').replace(' — ', ' · ');
       const rangeDim = line.product_config?.range_dimensions || '';
-      rows.push(renderRow(idx++, desig, lineQty, line.unit_price ?? 0, vatRate, false, colorRef, rangeDim, productDesc));
+      rows.push(renderRow(idx++, desig, lineQty, line.unit_price ?? 0, vatRate, false, colorRef, rangeDim, productDesc, ecoHT));
     }
   });
 
@@ -332,21 +317,21 @@ function renderLinesTable(lines, vatRate) {
   `;
 }
 
-function renderGroupHeader(designation, qty, totalTTC, isFirst = false) {
+function renderGroupHeader(designation, qty, ecoHT = 0, isFirst = false) {
   return `
     <tr class="group-header-row${isFirst ? ' first' : ''}">
       <td colspan="6">
         <div class="group-header-inner">
           <span class="group-header-name">${esc(designation)}</span>
           ${qty > 1 ? `<span class="group-header-qty">× ${qty}</span>` : ''}
-          <span class="group-header-total">${formatAmount(totalTTC)} € TTC</span>
+          ${ecoHT > 0 ? `<span style="font-size:9px;color:#15803d;font-style:italic;margin-left:6px">♻ dont éco-participation ${formatPrice(ecoHT)} €</span>` : ''}
         </div>
       </td>
     </tr>
   `;
 }
 
-function renderRow(idx, name, qty, unitHT, vatRate, isOption = false, colorRef = '', modDescription = '', productDescription = '') {
+function renderRow(idx, name, qty, unitHT, vatRate, isOption = false, colorRef = '', modDescription = '', productDescription = '', ecoHT = 0) {
   const num     = String(idx + 1).padStart(2, '0');
   const lineTTC = r2(unitHT * qty * (1 + vatRate / 100));
   const emoji   = getEmoji(name) || getEmoji(modDescription);
@@ -361,6 +346,7 @@ function renderRow(idx, name, qty, unitHT, vatRate, isOption = false, colorRef =
         <div class="desig-main${isOption ? ' desig-option' : ''}">${esc(label)}</div>
         ${modDescription ? `<div class="desig-detail">${esc(modDescription)}</div>` : ''}
         ${productDescription ? `<div class="desig-product-desc">${esc(productDescription)}</div>` : ''}
+        ${ecoHT > 0 ? `<div style="font-size:9px;color:#15803d;font-style:italic">♻ dont éco-participation ${formatPrice(ecoHT)} €</div>` : ''}
         ${colorRef ? `<div class="desig-option" style="font-style:normal;color:var(--gold)">Réf. ${esc(colorRef)}</div>` : ''}
       </td>
       <td class="td-qty">${qty}</td>
@@ -382,13 +368,8 @@ function renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate, c
   const discAmt    = doc.discount_amount  ?? 0;
   const discLabel  = (discPct > 0 && Number.isInteger(discPct)) ? `Remise ${discPct}%` : 'Remise';
 
-  // Séparation éco / régulier
-  const ecoLines     = lines.filter(l => l.is_eco);
-  const ecoSubHT     = r2(ecoLines.reduce((s, l) => s + (l.unit_price ?? 0) * (l.qty || 1), 0));
-  const ecoTTC       = r2(ecoSubHT * (1 + vatRate / 100));
-  const regularSubHT = r2(subtotalHT - ecoSubHT);
-  const regularVat   = r2(regularSubHT * vatRate / 100);
-  const regularTTC   = r2(regularSubHT + regularVat);
+  const regularVat = r2(subtotalHT * vatRate / 100);
+  const regularTTC = r2(subtotalHT + regularVat);
 
   // Acompte : utiliser deposit_amount directement (TTC), sinon recalculer sur netTTC
   const depositTTC = doc.deposit_amount > 0
@@ -403,26 +384,16 @@ function renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate, c
       <div class="total-ht-rows">
         <div class="total-ht-row">
           <span>Sous-total HT</span>
-          <span>${formatPrice(regularSubHT)} €</span>
+          <span>${formatPrice(subtotalHT)} €</span>
         </div>
         <div class="total-ht-row">
           <span>TVA ${vatRate}%</span>
           <span>${formatPrice(regularVat)} €</span>
         </div>
-        ${ecoSubHT > 0 ? `
-          <div class="total-ht-row" style="color:#15803d">
-            <span>♻ Éco-participation HT</span>
-            <span>${formatPrice(ecoSubHT)} €</span>
-          </div>
-          <div class="total-ht-row" style="color:#15803d">
-            <span>↳ TVA ${vatRate}%</span>
-            <span>${formatPrice(r2(ecoTTC - ecoSubHT))} €</span>
-          </div>
-        ` : ''}
         ${discAmt > 0 ? `
           <div class="total-ht-row">
             <span>Total TTC</span>
-            <span>${formatPrice(r2(regularTTC + ecoTTC))} €</span>
+            <span>${formatPrice(regularTTC)} €</span>
           </div>
           <div class="total-ht-row">
             <span>${discLabel}</span>

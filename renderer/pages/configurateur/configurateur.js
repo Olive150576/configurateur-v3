@@ -636,8 +636,18 @@ function handleAddConfig() {
 
   const modulesTotal   = selectedModules.reduce((s, m) => s + m.total, 0);
   const optionsTotal   = selectedOptions.reduce((s, o) => s + o.total, 0);
-  // PA × coeff = TTC (arrondi), puis HT = TTC / (1 + TVA%)
-  const unitPriceTTC   = applyRounding(round2(base * coeff) + modulesTotal + optionsTotal, mode);
+
+  // Éco : priorité module(s) sélectionné(s) → gamme → produit
+  const hasModulesForEco = (product.modules || []).length > 0;
+  let ecoHT = 0;
+  if (hasModulesForEco && selectedModules.length > 0) {
+    ecoHT = round2(selectedModules.reduce((sum, m) => sum + (m.eco_participation || 0), 0));
+  } else {
+    ecoHT = round2(range?.eco_participation || product.eco_participation || 0);
+  }
+
+  // PA × coeff = TTC (arrondi), éco incluse dans le prix TTC, puis HT = TTC / (1 + TVA%)
+  const unitPriceTTC   = round2(applyRounding(round2(base * coeff) + modulesTotal + optionsTotal, mode) + ecoHT);
   const unitPrice      = round2(unitPriceTTC / (1 + state.vatRate / 100));
   const lineTotal      = round2(unitPrice * qty);
 
@@ -667,35 +677,19 @@ function handleAddConfig() {
       supplier_name:            product.supplier_name            || '',
       supplier_delivery_weeks:  product.supplier_delivery_weeks  || '',
       product_description:      product.description              || '',
+      eco_ht:              ecoHT,
       modules:             selectedModules,
       options:             selectedOptions,
     },
   };
 
-  // Éco : priorité module(s) sélectionné(s) → gamme → produit
-  const hasModulesForEco = (product.modules || []).length > 0;
-  let ecoHT = 0;
-  if (hasModulesForEco && selectedModules.length > 0) {
-    ecoHT = selectedModules.reduce((sum, m) => sum + (m.eco_participation || 0), 0);
-  } else {
-    ecoHT = range?.eco_participation || product.eco_participation || 0;
-  }
-
   if (state.cfg.editingIdx !== null) {
     state.devisLines[state.cfg.editingIdx] = line;
+    // Supprimer l'éventuelle ancienne ligne éco séparée (ancienne version)
     const ecoIdx = state.devisLines.findIndex(l => l.is_eco && l.parentLineId === line.id);
-    if (ecoHT > 0) {
-      const ecoLine = buildEcoLine(ecoHT, qty, line.id, ecoIdx >= 0 ? state.devisLines[ecoIdx].id : null);
-      if (ecoIdx >= 0) state.devisLines[ecoIdx] = ecoLine;
-      else state.devisLines.splice(state.cfg.editingIdx + 1, 0, ecoLine);
-    } else if (ecoIdx >= 0) {
-      state.devisLines.splice(ecoIdx, 1);
-    }
+    if (ecoIdx >= 0) state.devisLines.splice(ecoIdx, 1);
   } else {
     state.devisLines.push(line);
-    if (ecoHT > 0) {
-      state.devisLines.push(buildEcoLine(ecoHT, qty, line.id, null));
-    }
   }
 
   closeConfigModal();
@@ -721,22 +715,11 @@ function renderDevisLines() {
   emptyEl.style.display = 'none';
 
   const productRows = state.devisLines.map((line, idx) => {
-    // Ligne éco-participation — affichage dédié, pas de bouton modifier/supprimer
-    if (line.is_eco) {
-      return `
-        <div class="devis-line" style="background:#f0fdf4;border-color:#86efac">
-          <div class="devis-line-body">
-            <div class="devis-line-name" style="color:#15803d;font-size:12px">♻️ ${Utils.escapeHtml(line.designation)}</div>
-            <div class="devis-line-desc" style="color:#15803d">Non remisable · Éco-mobilier obligatoire</div>
-          </div>
-          <div class="devis-line-right">
-            <div class="devis-line-price" style="color:#15803d">${Utils.formatPrice(line.total)} HT</div>
-            ${line.qty > 1 ? `<div class="devis-line-qty">${line.qty} × ${Utils.formatPrice(line.unit_price)} HT</div>` : ''}
-          </div>
-        </div>`;
-    }
+    // Ignorer les anciennes lignes éco séparées (documents précédents)
+    if (line.is_eco) return '';
 
-    const opts = line.product_config?.options ?? [];
+    const ecoHT  = line.product_config?.eco_ht ?? 0;
+    const opts   = line.product_config?.options ?? [];
     const optBadges = opts.length
       ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:5px">
           ${opts.map(o => `
@@ -754,6 +737,9 @@ function renderDevisLines() {
           : ''}
         ${line.color_ref
           ? `<div class="devis-line-desc" style="color:var(--color-primary)">🎨 ${Utils.escapeHtml(line.color_ref)}</div>`
+          : ''}
+        ${ecoHT > 0
+          ? `<div class="devis-line-desc" style="color:#15803d;font-size:11px">♻️ dont éco-participation ${Utils.formatPrice(ecoHT)} €</div>`
           : ''}
         ${optBadges}
       </div>
@@ -790,27 +776,8 @@ function renderDevisLines() {
   listEl.innerHTML = productRows + deliveryRow;
 }
 
-function buildEcoLine(ecoHT, qty, parentLineId, existingId = null) {
-  return {
-    id:           existingId || `eco_${Date.now()}_${Math.random().toString(36).substr(2,4)}`,
-    designation:  'Éco-participation (Éco-mobilier)',
-    description:  '',
-    color_ref:    '',
-    qty,
-    unit_price:   ecoHT,
-    total:        round2(ecoHT * qty),
-    is_eco:       true,
-    parentLineId,
-    product_config: null,
-  };
-}
-
 function removeLine(idx) {
-  const lineId = state.devisLines[idx].id;
   state.devisLines.splice(idx, 1);
-  // Supprimer aussi la ligne éco associée
-  const ecoIdx = state.devisLines.findIndex(l => l.is_eco && l.parentLineId === lineId);
-  if (ecoIdx >= 0) state.devisLines.splice(ecoIdx, 1);
   renderDevisLines();
   recalcDevisTotals();
 }
@@ -820,27 +787,17 @@ function removeLine(idx) {
 function recalcDevisTotals() {
   const deliveryAmt = state.delivery.enabled ? state.delivery.amount : 0;
 
-  // Séparer lignes éco (non remisables) des lignes régulières
-  const ecoLines     = state.devisLines.filter(l => l.is_eco);
-  const regularLines = state.devisLines.filter(l => !l.is_eco);
-
-  const ecoSubtotalHT     = ecoLines.reduce((s, l) => s + l.total, 0);
-  const regularSubtotalHT = regularLines.reduce((s, l) => s + l.total, 0) + deliveryAmt;
-  const subtotal          = regularSubtotalHT + ecoSubtotalHT;
-
-  const ecoTTC        = round2(ecoSubtotalHT * (1 + state.vatRate / 100));
-  const regularTTC    = round2(regularSubtotalHT * (1 + state.vatRate / 100));
+  const subtotal      = round2(state.devisLines.reduce((s, l) => s + l.total, 0) + deliveryAmt);
   const vatAmt        = round2(subtotal * state.vatRate / 100);
   const totalTTC_brut = round2(subtotal + vatAmt);
 
-  // Remise appliquée sur le TTC régulier uniquement (jamais sur l'éco-participation)
   const discInput   = parseFloat(document.getElementById('f-discount').value) || 0;
   const discInEur   = document.getElementById('discount-mode-eur').classList.contains('active');
   const discAmt     = discInEur
-    ? round2(Math.min(Math.max(discInput, 0), regularTTC))
-    : round2(regularTTC * clamp(discInput, 0, 100) / 100);
-  const discPct     = regularTTC > 0 ? round2(discAmt / regularTTC * 100) : 0;
-  const netTTC      = round2(regularTTC - discAmt + ecoTTC);
+    ? round2(Math.min(Math.max(discInput, 0), totalTTC_brut))
+    : round2(totalTTC_brut * clamp(discInput, 0, 100) / 100);
+  const discPct     = totalTTC_brut > 0 ? round2(discAmt / totalTTC_brut * 100) : 0;
+  const netTTC      = round2(totalTTC_brut - discAmt);
 
   // Acompte calculé sur le net TTC (après remise)
   const depInput    = parseFloat(document.getElementById('f-deposit').value) || 0;
@@ -851,7 +808,7 @@ function recalcDevisTotals() {
   const depositPct  = netTTC > 0 ? round2(depositAmt / netTTC * 100) : 0;
   const balance     = round2(netTTC - depositAmt);
 
-  state.totals = { subtotal, ecoSubtotalHT, ecoTTC, discountPct: discPct, discountAmt: discAmt,
+  state.totals = { subtotal, discountPct: discPct, discountAmt: discAmt,
                    total: netTTC, vatAmt, totalTTC: totalTTC_brut, depositPct, depositAmt, balance };
 
   document.getElementById('dt-subtotal').textContent  = Utils.formatPrice(subtotal);
