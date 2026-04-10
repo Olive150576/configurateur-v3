@@ -235,7 +235,21 @@ function updateBuilderPrice() {
     extrasTTC += qty * unit * optCoeff;
   });
 
-  const totalSale = applyRounding(basePurchase * coeff + extrasTTC, rounding);
+  // Éco : priorité module/gamme → produit (même logique que le configurateur)
+  let ecoPreview = 0;
+  if (hasModules) {
+    const rangeId  = document.getElementById('builder-range').value;
+    const moduleId = document.getElementById('builder-base').value;
+    const mod = (product.modules || []).find(m => m.id === moduleId);
+    ecoPreview = mod?.eco_participation || product.eco_participation || 0;
+  } else {
+    const rangeId = document.getElementById('builder-base').value;
+    const range = (product.ranges || []).find(r => r.id === rangeId);
+    ecoPreview = range?.eco_participation || product.eco_participation || 0;
+  }
+
+  // applyRounding sur le prix sans éco, puis on ajoute l'éco (identique au configurateur)
+  const totalSale = applyRounding(basePurchase * coeff + extrasTTC, rounding) + ecoPreview;
   document.getElementById('builder-price').textContent = formatPrice(totalSale);
 }
 
@@ -282,17 +296,7 @@ function addTile() {
     }
   });
 
-  const totalSale = applyRounding(basePurchase * coeff + extrasTTC, rounding);
-
-  // Titre auto-généré
-  let title = baseName.toUpperCase();
-  if (extras.length) {
-    title += ' + ' + extras
-      .map(e => `${e.qty > 1 ? e.qty + ' × ' : ''}${e.name.toUpperCase()}`)
-      .join(' + ');
-  }
-
-  // Éco-participation : priorité module/gamme → produit
+  // Éco-participation : priorité module/gamme → produit (identique au configurateur)
   let ecoHT = 0;
   if (hasModules) {
     const moduleId = document.getElementById('builder-base').value;
@@ -302,6 +306,17 @@ function addTile() {
     const rangeId = document.getElementById('builder-base').value;
     const range = (product.ranges || []).find(r => r.id === rangeId);
     ecoHT = range?.eco_participation || selectedProduct?.eco_participation || 0;
+  }
+
+  // applyRounding sur le prix sans éco, puis on ajoute l'éco (identique au configurateur)
+  const totalSale = applyRounding(basePurchase * coeff + extrasTTC, rounding) + ecoHT;
+
+  // Titre auto-généré
+  let title = baseName.toUpperCase();
+  if (extras.length) {
+    title += ' + ' + extras
+      .map(e => `${e.qty > 1 ? e.qty + ' × ' : ''}${e.name.toUpperCase()}`)
+      .join(' + ');
   }
 
   tileCombinations.push({ id: Date.now(), title, dimensions: baseDimensions, salePrice: totalSale, ecoHT });

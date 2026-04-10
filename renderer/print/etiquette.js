@@ -345,8 +345,8 @@ function getModuleSVG(title) {
 
 function renderTile(tile) {
   const [intPart, decPart] = formatPrice(tile.price);
-  const ecoHT  = parseFloat(tile.ecoHT || 0);
-  const ecoTTC = ecoHT > 0 ? Math.round(ecoHT * 1.2 * 100) / 100 : 0;
+  // eco_participation est stocké en TTC (pas de TVA à appliquer)
+  const ecoTTC = parseFloat(tile.ecoHT || 0);
   const ecoStr = ecoTTC > 0 ? ecoTTC.toFixed(2).replace('.', ',') : '';
 
   return `

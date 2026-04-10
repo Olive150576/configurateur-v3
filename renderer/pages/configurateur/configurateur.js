@@ -583,8 +583,19 @@ function recalcConfigTotal() {
     }
   });
 
-  // PA × coeff = TTC (arrondi selon le mode choisi)
-  const pvTTC  = applyRounding(round2(base * coeff) + round2(modulesTotal * coeff) + optionsTotal, mode);
+  // Éco : priorité module(s) sélectionné(s) → gamme → produit
+  const hasModulesForEco = (state.cfg.product.modules || []).length > 0;
+  const selectedMods = state.cfg.product.modules.filter(m => state.cfg.modules[m.id]?.selected);
+  let ecoDisplay = 0;
+  if (hasModulesForEco && selectedMods.length > 0) {
+    ecoDisplay = round2(selectedMods.reduce((sum, m) => sum + (m.eco_participation || 0), 0));
+  } else {
+    ecoDisplay = round2(range?.eco_participation || state.cfg.product.eco_participation || 0);
+  }
+
+  // PA × coeff = TTC (arrondi selon le mode choisi), éco incluse dans le prix final
+  const pvTTCsansEco = applyRounding(round2(base * coeff) + round2(modulesTotal * coeff) + optionsTotal, mode);
+  const pvTTC  = round2(pvTTCsansEco + ecoDisplay);
   const pvHT   = round2(pvTTC / (1 + state.vatRate / 100));
   const vatAmt = round2(pvTTC - pvHT);
   const qty    = Math.max(1, parseInt(document.getElementById('config-qty').value) || 1);
@@ -614,14 +625,23 @@ function handleAddConfig() {
   const mode   = product.price_rounding ?? 'none';
   const qty    = Math.max(1, parseInt(document.getElementById('config-qty').value) || 1);
 
-  // Modules sélectionnés (prix = PA × coeff, avant arrondi global)
+  // Éco : priorité module(s) sélectionné(s) → gamme → produit
+  const hasModulesForEco = (product.modules || []).length > 0;
+
+  // Modules sélectionnés
+  // unit_price = TTC avec éco incluse (pour affichage correct dans le PDF)
+  // _prixSansEco = TTC sans éco (utilisé pour applyRounding — l'éco ne doit pas être arrondie)
   const selectedModules = product.modules
     .filter(m => state.cfg.modules[m.id]?.selected)
     .map(m => {
-      const paPrice   = m.prices?.[state.cfg.rangeId] ?? 0;
-      const sellPrice = round2(paPrice * coeff);
-      const mQty      = state.cfg.modules[m.id].qty;
-      return { id: m.id, name: m.name, description: m.description || '', dimensions: m.dimensions || '', eco_participation: m.eco_participation || 0, qty: mQty, unit_price: sellPrice, total: round2(sellPrice * mQty) };
+      const paPrice    = m.prices?.[state.cfg.rangeId] ?? 0;
+      const sellPrice  = round2(paPrice * coeff);                               // TTC sans éco
+      const mEco       = hasModulesForEco ? (m.eco_participation || 0) : 0;
+      const mTTC       = round2(sellPrice + mEco);                              // TTC avec éco
+      const mQty       = state.cfg.modules[m.id].qty;
+      return { id: m.id, name: m.name, description: m.description || '', dimensions: m.dimensions || '',
+               eco_participation: m.eco_participation || 0, qty: mQty,
+               unit_price: mTTC, total: round2(mTTC * mQty), _sansEco: round2(sellPrice * mQty) };
     });
 
   // Options sélectionnées (prix = PA × coeff option ou coeff produit)
@@ -634,11 +654,11 @@ function handleAddConfig() {
       return { id: o.id, name: o.name, description: o.description || '', qty: oQty, price: pvPrc, total: round2(pvPrc * oQty) };
     });
 
-  const modulesTotal   = selectedModules.reduce((s, m) => s + m.total, 0);
-  const optionsTotal   = selectedOptions.reduce((s, o) => s + o.total, 0);
+  // Totaux sans éco (pour applyRounding) et avec éco (pour le total final)
+  const modulesTotalSansEco = selectedModules.reduce((s, m) => s + m._sansEco, 0);
+  const optionsTotal        = selectedOptions.reduce((s, o) => s + o.total, 0);
 
-  // Éco : priorité module(s) sélectionné(s) → gamme → produit
-  const hasModulesForEco = (product.modules || []).length > 0;
+  // ecoHT = montant éco total (pour product_config.eco_ht et note «dont éco»)
   let ecoHT = 0;
   if (hasModulesForEco && selectedModules.length > 0) {
     ecoHT = round2(selectedModules.reduce((sum, m) => sum + (m.eco_participation || 0), 0));
@@ -646,8 +666,10 @@ function handleAddConfig() {
     ecoHT = round2(range?.eco_participation || product.eco_participation || 0);
   }
 
-  // PA × coeff = TTC (arrondi), éco incluse dans le prix TTC, puis HT = TTC / (1 + TVA%)
-  const unitPriceTTC   = round2(applyRounding(round2(base * coeff) + modulesTotal + optionsTotal, mode) + ecoHT);
+  // applyRounding s'applique sur le prix SANS éco, puis on ajoute l'éco
+  // → l'éco n'est jamais arrondie, quel que soit le mode
+  const productTTC     = applyRounding(round2(base * coeff) + modulesTotalSansEco + optionsTotal, mode);
+  const unitPriceTTC   = round2(productTTC + ecoHT);
   const unitPrice      = round2(unitPriceTTC / (1 + state.vatRate / 100));
   const lineTotal      = round2(unitPrice * qty);
 
@@ -678,7 +700,7 @@ function handleAddConfig() {
       supplier_delivery_weeks:  product.supplier_delivery_weeks  || '',
       product_description:      product.description              || '',
       eco_ht:              ecoHT,
-      modules:             selectedModules,
+      modules:             selectedModules.map(({ _sansEco, ...m }) => m),  // retirer prop. temporaire
       options:             selectedOptions,
     },
   };

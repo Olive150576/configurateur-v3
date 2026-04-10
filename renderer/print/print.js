@@ -281,11 +281,12 @@ function renderLinesTable(lines, vatRate) {
 
     if (modules.length > 0) {
       // Un article = un module → une ligne par module
-      // mod.unit_price est stocké en TTC (PA × coeff) → convertir en HT pour renderRow
+      // mod.unit_price est stocké en TTC (PA × coeff + éco) → convertir en HT pour renderRow
       modules.forEach((mod) => {
         const modDesc   = [mod.dimensions, mod.description].filter(Boolean).join(' — ');
         const modUnitHT = r2((mod.unit_price ?? 0) / (1 + vatRate / 100));
-        rows.push(renderRow(idx++, mod.name, mod.qty || 1, modUnitHT, vatRate, false, colorRef, modDesc, ''));
+        const modEco    = mod.eco_participation || 0;
+        rows.push(renderRow(idx++, mod.name, mod.qty || 1, modUnitHT, vatRate, false, colorRef, modDesc, '', modEco));
       });
       // Options éventuelles (supplément) — opt.price aussi en TTC
       options.forEach(opt => {
