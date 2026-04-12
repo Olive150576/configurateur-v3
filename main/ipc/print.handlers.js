@@ -39,8 +39,8 @@ function register(ipcMain) {
   );
 
   // Catalogue PDF client (prix de vente TTC, 2 produits / page)
-  ipcMain.handle('catalogue:printClient', (_, supplierId) =>
-    wrap(() => PrintService.openCatalogueClient(supplierId || null))
+  ipcMain.handle('catalogue:printClient', (_, supplierId, productId) =>
+    wrap(() => PrintService.openCatalogueClient(supplierId || null, productId || null))
   );
 }
 

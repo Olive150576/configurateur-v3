@@ -1336,8 +1336,34 @@ function hideAllErrors() {
 // ==================== CATALOGUE PDF ====================
 
 function setupCatalogue() {
+  const selSupplier    = document.getElementById('cat-supplier');
+  const selProduct     = document.getElementById('cat-product');
+  const productGroup   = document.getElementById('cat-product-group');
+
+  // Quand le fournisseur change → mettre à jour la liste des modèles
+  selSupplier.addEventListener('change', () => {
+    const supplierId = selSupplier.value;
+    selProduct.innerHTML = '<option value="">— Tous les modèles —</option>';
+
+    if (supplierId) {
+      const prods = (state.products || [])
+        .filter(p => p.supplier_id === supplierId && !p.archived && p.active)
+        .sort((a, b) => (a.collection || '').localeCompare(b.collection || '') || a.name.localeCompare(b.name));
+
+      prods.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.collection ? `${p.collection} — ${p.name}` : p.name;
+        selProduct.appendChild(opt);
+      });
+      productGroup.style.display = '';
+    } else {
+      productGroup.style.display = 'none';
+    }
+  });
+
   document.getElementById('btn-open-catalogue').addEventListener('click', async () => {
-    const supplierId = document.getElementById('cat-supplier').value || null;
+    const supplierId = selSupplier.value || null;
     const btn = document.getElementById('btn-open-catalogue');
     btn.disabled = true;
     const res = await window.api.catalogue.print(supplierId);
@@ -1346,10 +1372,11 @@ function setupCatalogue() {
   });
 
   document.getElementById('btn-open-catalogue-client').addEventListener('click', async () => {
-    const supplierId = document.getElementById('cat-supplier').value || null;
+    const supplierId = selSupplier.value || null;
+    const productId  = selProduct.value   || null;
     const btn = document.getElementById('btn-open-catalogue-client');
     btn.disabled = true;
-    const res = await window.api.catalogue.printClient(supplierId);
+    const res = await window.api.catalogue.printClient(supplierId, productId);
     btn.disabled = false;
     if (!res.ok) Utils.toast('Erreur : ' + res.error, 'error');
   });

@@ -81,7 +81,7 @@ contextBridge.exposeInMainWorld('api', {
   // ==================== CATALOGUE ====================
   catalogue: {
     print:       (supplierId) => ipcRenderer.invoke('catalogue:print', supplierId),
-    printClient: (supplierId) => ipcRenderer.invoke('catalogue:printClient', supplierId),
+    printClient: (supplierId, productId) => ipcRenderer.invoke('catalogue:printClient', supplierId, productId),
   },
 
   // ==================== STATISTIQUES ====================

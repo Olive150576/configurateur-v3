@@ -9,6 +9,7 @@
 
 const params     = new URLSearchParams(window.location.search);
 const supplierId = params.get('supplierId') || '';
+const productId  = params.get('productId')  || '';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -47,12 +48,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       company[k] = (configResults[i]?.ok ? configResults[i].data : '') || '';
     });
 
-    // Filtre : actifs, non archivés, et fournisseur si sélectionné
+    // Filtre : actifs, non archivés, fournisseur et modèle si sélectionnés
     const products = allProdsRes.data
       .filter(p => {
         if (p.archived == 1) return false;
         if (p.active  == 0)  return false;
         if (supplierId && p.supplier_id !== supplierId) return false;
+        if (productId  && p.id          !== productId)  return false;
         return true;
       })
       .sort((a, b) =>
@@ -168,53 +170,55 @@ function buildProductCard(p) {
 
   return `
     <div class="product-card">
+
+      <!-- PHOTO PLEINE LARGEUR -->
+      <div class="pc-photo">
+        ${p.photo
+          ? `<img src="${p.photo}" alt="${escHtml(p.name)}">`
+          : `<div class="pc-photo-ph">Photo produit</div>`}
+      </div>
+
+      <!-- NOM + COLLECTION -->
       <div class="pc-header">
         ${p.collection ? `<div class="pc-collection">${escHtml(p.collection)}</div>` : ''}
         <div class="pc-name">${escHtml(p.name)}</div>
       </div>
 
-      <div class="pc-body">
-        <div class="pc-photo">
-          ${p.photo
-            ? `<img src="${p.photo}" alt="${escHtml(p.name)}">`
-            : `<div class="pc-photo-ph">Photo<br>produit</div>`}
-        </div>
+      <!-- DESCRIPTION + TARIFS + OPTIONS -->
+      <div class="pc-info">
+        ${descText ? `<div class="pc-desc">${escHtml(descText)}</div>` : ''}
 
-        <div class="pc-info">
-          ${descText ? `<div class="pc-desc">${escHtml(descText)}</div>` : ''}
+        ${pricedRanges.length ? `
+        <div class="pc-section">
+          <div class="pc-section-title">Tarifs</div>
+          <table class="ranges-table">
+            ${pricedRanges.map(r => renderRangeRow(r, coeff, mode, eco)).join('')}
+          </table>
+        </div>` : ''}
 
-          ${pricedRanges.length ? `
-          <div class="pc-section">
-            <div class="pc-section-title">Tarifs</div>
-            <table class="ranges-table">
-              ${pricedRanges.map(r => renderRangeRow(r, coeff, mode, eco)).join('')}
-            </table>
-          </div>` : ''}
+        ${modules.length ? `
+        <div class="pc-section">
+          <div class="pc-section-title">Modules disponibles</div>
+          <table class="modules-table">
+            <thead>
+              <tr>
+                <th class="col-module">Module</th>
+                ${ranges.map(r => `<th class="col-price">${escHtml(r.name)}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${modules.map(m => renderModuleRow(m, ranges, coeff, mode, eco)).join('')}
+            </tbody>
+          </table>
+        </div>` : ''}
 
-          ${modules.length ? `
-          <div class="pc-section">
-            <div class="pc-section-title">Modules disponibles</div>
-            <table class="modules-table">
-              <thead>
-                <tr>
-                  <th class="col-module">Module</th>
-                  ${ranges.map(r => `<th class="col-price">${escHtml(r.name)}</th>`).join('')}
-                </tr>
-              </thead>
-              <tbody>
-                ${modules.map(m => renderModuleRow(m, ranges, coeff, mode, eco)).join('')}
-              </tbody>
-            </table>
-          </div>` : ''}
-
-          ${options.length ? `
-          <div class="pc-section">
-            <div class="pc-section-title">Options disponibles</div>
-            <div class="options-list">
-              ${options.map(o => renderOptionChip(o, coeff, mode)).join('')}
-            </div>
-          </div>` : ''}
-        </div>
+        ${options.length ? `
+        <div class="pc-section">
+          <div class="pc-section-title">Options disponibles</div>
+          <div class="options-list">
+            ${options.map(o => renderOptionChip(o, coeff, mode)).join('')}
+          </div>
+        </div>` : ''}
       </div>
     </div>
   `;
