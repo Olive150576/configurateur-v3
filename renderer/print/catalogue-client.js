@@ -149,6 +149,38 @@ function buildPage(pair, company, logo, companyName, pageNum, totalPages, dateSt
   `;
 }
 
+// ── Rendu photos (1, 2 ou 3 photos selon disponibilité) ──────────────────────
+
+function renderPhotos(p) {
+  // Priorité : photos[] (multi), fallback sur p.photo (legacy)
+  const photos = (p.photos && p.photos.length > 0)
+    ? p.photos.map(ph => ph.photo).filter(Boolean)
+    : (p.photo ? [p.photo] : []);
+
+  if (photos.length === 0) {
+    return `<div class="pc-photos pc-photos-empty"><span>Photo produit</span></div>`;
+  }
+  if (photos.length === 1) {
+    return `<div class="pc-photos pc-photos-1">
+      <img src="${photos[0]}" alt="">
+    </div>`;
+  }
+  if (photos.length === 2) {
+    return `<div class="pc-photos pc-photos-2">
+      <img src="${photos[0]}" alt="">
+      <img src="${photos[1]}" alt="">
+    </div>`;
+  }
+  // 3 photos ou plus : grande à gauche + 2 vignettes empilées à droite
+  return `<div class="pc-photos pc-photos-3">
+    <img class="photo-main" src="${photos[0]}" alt="">
+    <div class="photo-side">
+      <img src="${photos[1]}" alt="">
+      <img src="${photos[2]}" alt="">
+    </div>
+  </div>`;
+}
+
 // ── Card produit ──────────────────────────────────────────────────────────────
 
 function buildProductCard(p) {
@@ -171,12 +203,8 @@ function buildProductCard(p) {
   return `
     <div class="product-card">
 
-      <!-- PHOTO PLEINE LARGEUR -->
-      <div class="pc-photo">
-        ${p.photo
-          ? `<img src="${p.photo}" alt="${escHtml(p.name)}">`
-          : `<div class="pc-photo-ph">Photo produit</div>`}
-      </div>
+      <!-- PHOTOS (1, 2 ou 3 selon disponibilité) -->
+      ${renderPhotos(p)}
 
       <!-- NOM + COLLECTION -->
       <div class="pc-header">
