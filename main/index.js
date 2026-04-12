@@ -3,15 +3,14 @@
  */
 
 const path = require('path');
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
 
 // Charger les variables d'environnement (.env) avant tout require de service
 require('dotenv').config({
-  path: process.resourcesPath
+  path: app.isPackaged
     ? path.join(process.resourcesPath, '.env')
     : path.join(__dirname, '..', '.env'),
 });
-
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const { initDatabase } = require('./db/database');
 const { autoUpdater } = require('electron-updater');
 
