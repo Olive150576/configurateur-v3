@@ -145,6 +145,20 @@
     .ranges-table td.range-dots::after { content: ''; display: block; border-bottom: 1px dotted #ccc; margin-top: 6px; }
     .ranges-table td.range-price { font-family: var(--serif); font-size: 13px; font-weight: 700; white-space: nowrap; text-align: right; color: var(--black); }
 
+    /* Sections génériques */
+    .pc-section { flex-shrink: 0; }
+    .pc-section-title { font-size: 8px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); margin-bottom: 5px; }
+
+    /* Tableau modules */
+    .modules-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+    .modules-table th { font-size: 8px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--gold); border-bottom: 1px solid #e8e8e8; padding: 0 6px 4px 0; }
+    .modules-table th.col-price { text-align: right; padding-left: 8px; border-left: 1px solid #e8e8e8; }
+    .modules-table td { padding: 3px 6px 3px 0; border-bottom: 1px dashed #f0f0f0; color: var(--black); }
+    .modules-table td.col-price { text-align: right; font-family: var(--serif); font-size: 11px; font-weight: 700; white-space: nowrap; padding-left: 8px; border-left: 1px solid #ececec; }
+    .modules-table tr:last-child td { border-bottom: none; }
+    .modules-table .col-module { font-family: var(--serif); }
+    .modules-table .dim { font-size: 8px; color: var(--light); font-family: var(--sans); }
+
     /* Options */
     .pc-options { flex-shrink: 0; }
     .pc-options-title { font-size: 8px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); margin-bottom: 5px; }

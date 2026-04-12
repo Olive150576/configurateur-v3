@@ -5,6 +5,11 @@
 
 'use strict';
 
+// ── Params ────────────────────────────────────────────────────────────────────
+
+const params     = new URLSearchParams(window.location.search);
+const supplierId = params.get('supplierId') || '';
+
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const CONFIG_KEYS = [
@@ -42,20 +47,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       company[k] = (configResults[i]?.ok ? configResults[i].data : '') || '';
     });
 
-    // Filtre : actifs non archivés uniquement
+    // Filtre : actifs, non archivés, et fournisseur si sélectionné
     const products = allProdsRes.data
-      .filter(p => p.archived != 1 && p.active != 0)
+      .filter(p => {
+        if (p.archived == 1) return false;
+        if (p.active  == 0)  return false;
+        if (supplierId && p.supplier_id !== supplierId) return false;
+        return true;
+      })
       .sort((a, b) =>
         (a.collection || '').localeCompare(b.collection || '') ||
         a.name.localeCompare(b.name)
       );
 
     if (products.length === 0) {
-      showError('Aucun produit actif trouvé.');
+      showError('Aucun produit actif trouvé' + (supplierId ? ' pour ce fournisseur' : '') + '.');
       return;
     }
 
-    document.getElementById('toolbar-info').textContent = `${products.length} produit${products.length > 1 ? 's' : ''}`;
+    const supplierLabel = supplierId ? (products[0]?.supplier_name || '') : 'Tous fournisseurs';
+    document.getElementById('toolbar-title').textContent = `Catalogue client — ${supplierLabel}`;
+    document.getElementById('toolbar-info').textContent  = `${products.length} produit${products.length > 1 ? 's' : ''}`;
 
     renderCatalogue(products, company);
 
@@ -101,17 +113,13 @@ function renderCatalogue(products, company) {
 // ── Construction d'une page A4 ────────────────────────────────────────────────
 
 function buildPage(pair, company, logo, companyName, pageNum, totalPages, dateStr) {
-  const companyAddr = [company.company_address, [company.company_zip, company.company_city].filter(Boolean).join(' ')]
-    .filter(Boolean).join(' — ');
+  const companyAddr    = [company.company_address, [company.company_zip, company.company_city].filter(Boolean).join(' ')].filter(Boolean).join(' — ');
   const companyContact = [company.company_phone, company.company_email].filter(Boolean).join(' · ');
 
   return `
-    <!-- EN-TÊTE DE PAGE -->
     <div class="page-header">
       <div class="ph-logo">
-        ${logo
-          ? `<img src="${logo}" alt="Logo">`
-          : `<div class="ph-logo-ph">Logo</div>`}
+        ${logo ? `<img src="${logo}" alt="Logo">` : `<div class="ph-logo-ph">Logo</div>`}
       </div>
       <div class="ph-company">
         <div class="ph-company-name">${escHtml(companyName)}</div>
@@ -124,7 +132,6 @@ function buildPage(pair, company, logo, companyName, pageNum, totalPages, dateSt
       </div>
     </div>
 
-    <!-- PRODUITS -->
     <div class="products-container">
       ${pair.map((p, i) => [
         i > 0 ? '<div class="card-divider"></div>' : '',
@@ -132,13 +139,10 @@ function buildPage(pair, company, logo, companyName, pageNum, totalPages, dateSt
       ].join('')).join('')}
     </div>
 
-    <!-- PIED DE PAGE -->
     <div class="page-footer">
       <div class="pf-left">${escHtml(companyAddr)}</div>
       <div class="pf-center">Prix TTC indicatifs — TVA incluse — Sous réserve de disponibilité</div>
-      <div class="pf-right">
-        ${company.company_website ? escHtml(company.company_website) : ''}
-      </div>
+      <div class="pf-right">${company.company_website ? escHtml(company.company_website) : ''}</div>
     </div>
   `;
 }
@@ -149,7 +153,8 @@ function buildProductCard(p) {
   const coeff   = parseFloat(p.purchase_coefficient) || 2;
   const mode    = p.price_rounding || 'none';
   const eco     = parseFloat(p.eco_participation) || 0;
-  const ranges  = p.ranges || [];
+  const ranges  = p.ranges  || [];
+  const modules = p.modules || [];
   const options = p.options || [];
 
   const descText = (p.description || '')
@@ -158,55 +163,67 @@ function buildProductCard(p) {
     .filter(Boolean)
     .join(' · ');
 
+  // Gammes avec base_price > 0 uniquement (les autres sont tarifées par modules)
+  const pricedRanges = ranges.filter(r => parseFloat(r.base_price) > 0);
+
   return `
     <div class="product-card">
-      <!-- EN-TÊTE PRODUIT -->
       <div class="pc-header">
         ${p.collection ? `<div class="pc-collection">${escHtml(p.collection)}</div>` : ''}
         <div class="pc-name">${escHtml(p.name)}</div>
       </div>
 
-      <!-- CORPS : PHOTO + INFOS -->
       <div class="pc-body">
-
-        <!-- PHOTO -->
         <div class="pc-photo">
           ${p.photo
             ? `<img src="${p.photo}" alt="${escHtml(p.name)}">`
             : `<div class="pc-photo-ph">Photo<br>produit</div>`}
         </div>
 
-        <!-- INFOS DROITE -->
         <div class="pc-info">
-
           ${descText ? `<div class="pc-desc">${escHtml(descText)}</div>` : ''}
 
-          ${ranges.length ? `
-          <div class="pc-ranges">
-            <div class="pc-ranges-title">Tarifs</div>
+          ${pricedRanges.length ? `
+          <div class="pc-section">
+            <div class="pc-section-title">Tarifs</div>
             <table class="ranges-table">
-              ${ranges.map(r => renderRangeRow(r, coeff, mode, eco)).join('')}
+              ${pricedRanges.map(r => renderRangeRow(r, coeff, mode, eco)).join('')}
+            </table>
+          </div>` : ''}
+
+          ${modules.length ? `
+          <div class="pc-section">
+            <div class="pc-section-title">Modules disponibles</div>
+            <table class="modules-table">
+              <thead>
+                <tr>
+                  <th class="col-module">Module</th>
+                  ${ranges.map(r => `<th class="col-price">${escHtml(r.name)}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${modules.map(m => renderModuleRow(m, ranges, coeff, mode, eco)).join('')}
+              </tbody>
             </table>
           </div>` : ''}
 
           ${options.length ? `
-          <div class="pc-options">
-            <div class="pc-options-title">Options disponibles</div>
+          <div class="pc-section">
+            <div class="pc-section-title">Options disponibles</div>
             <div class="options-list">
               ${options.map(o => renderOptionChip(o, coeff, mode)).join('')}
             </div>
           </div>` : ''}
-
         </div>
       </div>
     </div>
   `;
 }
 
-// ── Ligne de gamme ────────────────────────────────────────────────────────────
+// ── Ligne de gamme (base_price > 0) ──────────────────────────────────────────
 
 function renderRangeRow(r, coeff, mode, eco) {
-  const base     = parseFloat(r.base_price) || 0;
+  const base     = parseFloat(r.base_price);
   const rangeEco = parseFloat(r.eco_participation) || eco;
   const priceTTC = round2(applyRounding(base * coeff, mode) + rangeEco);
   return `
@@ -214,6 +231,23 @@ function renderRangeRow(r, coeff, mode, eco) {
       <td class="range-name">${escHtml(r.name)}</td>
       <td class="range-dots"></td>
       <td class="range-price">${Number(priceTTC).toLocaleString('fr-FR')} €</td>
+    </tr>`;
+}
+
+// ── Ligne de module ───────────────────────────────────────────────────────────
+
+function renderModuleRow(m, ranges, coeff, mode, eco) {
+  const mEco = parseFloat(m.eco_participation) || eco;
+  const priceCells = ranges.map(r => {
+    const pa = parseFloat((m.prices || {})[r.id]);
+    if (!pa) return `<td class="col-price" style="color:#ccc">—</td>`;
+    const priceTTC = round2(applyRounding(pa * coeff, mode) + mEco);
+    return `<td class="col-price">${Number(priceTTC).toLocaleString('fr-FR')} €</td>`;
+  });
+  return `
+    <tr>
+      <td class="col-module">${escHtml(m.name)}${m.dimensions ? `<span class="dim"> · ${escHtml(m.dimensions)}</span>` : ''}</td>
+      ${priceCells.join('')}
     </tr>`;
 }
 

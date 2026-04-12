@@ -164,7 +164,7 @@ async function openCatalogue(supplierId) {
 /**
  * Ouvre le catalogue PDF client (prix de vente TTC, 2 produits / page)
  */
-async function openCatalogueClient() {
+async function openCatalogueClient(supplierId) {
   const win = new BrowserWindow({
     width:  920,
     height: 1160,
@@ -178,7 +178,7 @@ async function openCatalogueClient() {
   });
 
   const htmlPath = path.join(__dirname, '../../renderer/print/catalogue-client.html');
-  await win.loadFile(htmlPath);
+  await win.loadFile(htmlPath, { query: { supplierId: supplierId || '' } });
 
   return { opened: true };
 }
