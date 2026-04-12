@@ -161,4 +161,26 @@ async function openCatalogue(supplierId) {
   return { opened: true };
 }
 
-module.exports = { openDocument, openSupplierDocument, savePDF, saveAndEmail, openEtiquette, openCatalogue };
+/**
+ * Ouvre le catalogue PDF client (prix de vente TTC, 2 produits / page)
+ */
+async function openCatalogueClient() {
+  const win = new BrowserWindow({
+    width:  920,
+    height: 1160,
+    minWidth: 700,
+    title: 'Catalogue client',
+    webPreferences: {
+      preload: path.join(__dirname, '../preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  const htmlPath = path.join(__dirname, '../../renderer/print/catalogue-client.html');
+  await win.loadFile(htmlPath);
+
+  return { opened: true };
+}
+
+module.exports = { openDocument, openSupplierDocument, savePDF, saveAndEmail, openEtiquette, openCatalogue, openCatalogueClient };

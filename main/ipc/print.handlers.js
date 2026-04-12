@@ -37,6 +37,11 @@ function register(ipcMain) {
   ipcMain.handle('catalogue:print', (_, supplierId) =>
     wrap(() => PrintService.openCatalogue(supplierId || null))
   );
+
+  // Catalogue PDF client (prix de vente TTC, 2 produits / page)
+  ipcMain.handle('catalogue:printClient', () =>
+    wrap(() => PrintService.openCatalogueClient())
+  );
 }
 
 module.exports = { register };

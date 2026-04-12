@@ -1344,6 +1344,14 @@ function setupCatalogue() {
     btn.disabled = false;
     if (!res.ok) Utils.toast('Erreur : ' + res.error, 'error');
   });
+
+  document.getElementById('btn-open-catalogue-client').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-open-catalogue-client');
+    btn.disabled = true;
+    const res = await window.api.catalogue.printClient();
+    btn.disabled = false;
+    if (!res.ok) Utils.toast('Erreur : ' + res.error, 'error');
+  });
 }
 
 // ==================== MISE À JOUR TARIFS EN MASSE ====================

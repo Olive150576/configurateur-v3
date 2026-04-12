@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(k,v\\) for k,v in {**d.get\\(''''dependencies'''',{}\\), **d.get\\(''''devDependencies'''',{}\\)}.items\\(\\)]\")",
+      "Bash(node -e \"const d=require\\(''''/dev/stdin''''\\); const deps={...d.dependencies,...d.devDependencies}; Object.entries\\(deps\\).forEach\\(\\([k,v]\\)=>console.log\\(k,v\\)\\)\")",
+      "Bash(node -e \":*)",
+      "Bash(node -e \"const p=require\\(''./package.json''\\); console.log\\(p.version\\)\")",
+      "Bash(git pull:*)",
+      "Bash(git tag:*)",
+      "Bash(timeout 8 node -e ':*)"
+    ]
+  }
+}
