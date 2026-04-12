@@ -19,16 +19,6 @@ let tileCombinations = [];
 
 // ── Helpers prix ──────────────────────────────────────────────────────────────
 
-function applyRounding(price, mode) {
-  if (mode === 'integer') return Math.round(price);
-  if (mode === 'ten')     return Math.round(price / 10) * 10;
-  return Math.round(price * 100) / 100;
-}
-
-function salePrice(purchasePrice, coeff, rounding) {
-  // PA × coeff = prix TTC direct (la TVA est déjà incluse dans le coefficient)
-  return applyRounding((purchasePrice || 0) * coeff, rounding);
-}
 
 function formatPrice(n) {
   if (!n && n !== 0) return '—';

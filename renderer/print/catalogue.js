@@ -301,15 +301,6 @@ function renderFooter(company, companyName, pageNum, total) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function applyRounding(price, mode) {
-  if (mode === 'integer') return Math.round(price);
-  if (mode === 'ten') {
-    const r = Math.round(price);
-    const d = r % 10;
-    return d < 5 ? r - d : r + (10 - d);
-  }
-  return Math.round(price * 100) / 100;
-}
 
 function formatPrice(n) {
   if (!n && n !== 0) return ['0', '00'];

@@ -495,7 +495,7 @@ function renderFooter(company, docType) {
 
 // ==================== HELPERS ====================
 
-function r2(n) { return Math.round(n * 100) / 100; }
+function r2(n) { return round2(n); }
 
 function getEmoji(text) {
   const t = (text || '').toLowerCase();

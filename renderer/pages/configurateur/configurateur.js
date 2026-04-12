@@ -978,11 +978,4 @@ function closeConfirm() {
 
 // ==================== HELPERS ====================
 
-function round2(n)        { return Math.round(n * 100) / 100; }
 function clamp(v, min, max) { return Math.min(Math.max(v, min), max); }
-
-function applyRounding(price, mode) {
-  if (mode === 'integer') return Math.round(price);
-  if (mode === 'ten')     return Math.round(price / 10) * 10;
-  return round2(price);
-}

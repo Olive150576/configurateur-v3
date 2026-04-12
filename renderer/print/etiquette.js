@@ -106,11 +106,6 @@ function escHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
-function applyRounding(price, mode) {
-  if (mode === 'integer') return Math.round(price);
-  if (mode === 'ten')     return Math.round(price / 10) * 10;
-  return Math.round(price * 100) / 100;
-}
 
 
 /** Retourne un emoji selon le contenu du texte (option ou ligne de description) */
