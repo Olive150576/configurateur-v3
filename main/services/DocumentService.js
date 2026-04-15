@@ -76,8 +76,9 @@ function create(data) {
       client_snapshot, product_snapshot,
       subtotal, discount_percent, discount_amount,
       total, deposit_percent, deposit_amount, balance,
-      notes, parent_id
-    ) VALUES (?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      notes, parent_id,
+      composition_svg, composition_json
+    ) VALUES (?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id, data.type, data.client_id || null,
     JSON.stringify(data.client_snapshot || {}),
@@ -85,7 +86,9 @@ function create(data) {
     data.subtotal, data.discount_percent, data.discount_amount,
     data.total, data.deposit_percent, data.deposit_amount, data.balance,
     data.notes || '',
-    data.parent_id || null
+    data.parent_id || null,
+    data.composition_svg  || null,
+    data.composition_json || null
   );
 
   log('document', id, 'created', { type: data.type });
@@ -110,7 +113,10 @@ function update(id, data) {
       type = ?, client_id = ?, client_snapshot = ?, product_snapshot = ?,
       subtotal = ?, discount_percent = ?, discount_amount = ?,
       total = ?, deposit_percent = ?, deposit_amount = ?, balance = ?,
-      notes = ?, updated_at = datetime('now')
+      notes = ?,
+      composition_svg  = ?,
+      composition_json = ?,
+      updated_at = datetime('now')
     WHERE id = ?
   `).run(
     data.type ?? existing.type,
@@ -125,6 +131,8 @@ function update(id, data) {
     data.deposit_amount ?? existing.deposit_amount,
     data.balance ?? existing.balance,
     data.notes ?? existing.notes,
+    'composition_svg'  in data ? (data.composition_svg  || null) : existing.composition_svg,
+    'composition_json' in data ? (data.composition_json || null) : existing.composition_json,
     id
   );
 

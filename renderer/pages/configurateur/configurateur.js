@@ -18,6 +18,7 @@ let state = {
   vatRate:         20,
   previewDocId:    null,    // id du brouillon d'aperçu en cours
   delivery:        { enabled: false, amount: 0, amountTTC: 0 },
+  selectedComposition: null,  // { id, name, thumbnail_svg, modules_json }
 
   // Modal configuration produit
   cfg: {
@@ -85,6 +86,12 @@ function setupHeader() {
     inp.removeAttribute('max'); inp.step = 1; inp.value = 0;
     recalcDevisTotals();
   });
+
+  // Composition de salon
+  document.getElementById('btn-pick-composition')
+    .addEventListener('click', openCompositionPicker);
+  document.getElementById('btn-clear-composition')
+    .addEventListener('click', clearComposition);
 
   // Livraison
   document.getElementById('f-delivery-enabled').addEventListener('change', e => {
@@ -843,6 +850,92 @@ function recalcDevisTotals() {
   document.getElementById('dt-balance').textContent   = Utils.formatPrice(balance) + ' TTC';
 }
 
+// ==================== COMPOSITION DE SALON ====================
+
+async function openCompositionPicker() {
+  const res = await window.api.compositions.getAll();
+  if (!res.ok) { Utils.toast('Erreur chargement compositions', 'error'); return; }
+
+  const list = res.data || [];
+  if (list.length === 0) {
+    Utils.toast('Aucune composition sauvegardée — créez-en une dans la section Compositions', 'warning');
+    return;
+  }
+
+  // Build modal dynamically
+  let existing = document.getElementById('modal-composition-picker');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-composition-picker';
+  modal.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:2000;align-items:center;justify-content:center';
+
+  const inner = document.createElement('div');
+  inner.style.cssText = 'background:white;border-radius:10px;padding:20px 22px;width:480px;max-width:96vw;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.22)';
+
+  inner.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-weight:700;font-size:14px;color:#1e293b">Choisir une composition</div>
+      <button id="btn-close-comp-picker" style="background:none;border:none;font-size:18px;cursor:pointer;color:#64748b;line-height:1">✕</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      ${list.map(c => `
+        <div class="comp-pick-item" data-id="${c.id}" data-name="${c.name.replace(/"/g,'&quot;')}"
+          style="border:1px solid #e2e8f0;border-radius:8px;padding:8px;cursor:pointer;transition:border-color .12s">
+          <div style="height:56px;background:#f1f5f9;border-radius:5px;margin-bottom:6px;overflow:hidden">
+            ${c.thumbnail_svg || '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:11px">Pas d\'aperçu</div>'}
+          </div>
+          <div style="font-size:12px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  modal.appendChild(inner);
+  document.body.appendChild(modal);
+
+  // Style hover
+  inner.querySelectorAll('.comp-pick-item').forEach(el => {
+    el.addEventListener('mouseenter', () => el.style.borderColor = '#c8a96e');
+    el.addEventListener('mouseleave', () => el.style.borderColor = '#e2e8f0');
+    el.addEventListener('click', () => {
+      const chosen = list.find(c => c.id === parseInt(el.dataset.id));
+      if (chosen) selectComposition(chosen);
+      modal.remove();
+    });
+  });
+
+  document.getElementById('btn-close-comp-picker').addEventListener('click', () => modal.remove());
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+function selectComposition(comp) {
+  state.selectedComposition = comp;
+
+  document.getElementById('composition-empty-hint').style.display = 'none';
+  document.getElementById('composition-preview').style.display = 'block';
+  document.getElementById('btn-clear-composition').style.display = 'inline-block';
+
+  const thumb = document.getElementById('composition-preview-thumb');
+  thumb.innerHTML = comp.thumbnail_svg
+    ? `<div style="width:100%;height:100%">${comp.thumbnail_svg}</div>`
+    : '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:11px">Pas d\'aperçu</div>';
+  // Force SVG to fill the container
+  const svgEl = thumb.querySelector('svg');
+  if (svgEl) { svgEl.style.width = '100%'; svgEl.style.height = '100%'; }
+
+  document.getElementById('composition-preview-name').textContent = comp.name;
+}
+
+function clearComposition() {
+  state.selectedComposition = null;
+  document.getElementById('composition-empty-hint').style.display = 'block';
+  document.getElementById('composition-preview').style.display = 'none';
+  document.getElementById('btn-clear-composition').style.display = 'none';
+  document.getElementById('composition-preview-thumb').innerHTML = '';
+  document.getElementById('composition-preview-name').textContent = '';
+}
+
 // ==================== SAUVEGARDE ====================
 
 function buildDocData() {
@@ -863,6 +956,7 @@ function buildDocData() {
       product_config:   null,
     });
   }
+  const comp = state.selectedComposition;
   return {
     type,
     client_id:        state.selectedClient?.id ?? null,
@@ -876,6 +970,8 @@ function buildDocData() {
     deposit_amount:   t.depositAmt,
     balance:          t.balance,
     notes:            document.getElementById('f-notes').value.trim(),
+    composition_svg:  comp ? comp.thumbnail_svg  : null,
+    composition_json: comp ? comp.modules_json   : null,
   };
 }
 

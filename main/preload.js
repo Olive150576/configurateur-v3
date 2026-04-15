@@ -121,4 +121,11 @@ contextBridge.exposeInMainWorld('api', {
   shell: {
     openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
   },
+
+  // ==================== COMPOSITIONS ====================
+  compositions: {
+    getAll:  ()      => ipcRenderer.invoke('compositions:getAll'),
+    save:    (data)  => ipcRenderer.invoke('compositions:save', data),
+    delete:  (id)    => ipcRenderer.invoke('compositions:delete', id),
+  },
 });

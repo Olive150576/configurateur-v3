@@ -447,6 +447,29 @@
           </div>
         </div>
 
+        <!-- ── Composition de salon ── -->
+        <div style="margin-bottom:10px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;background:#fafafa">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.6px">Composition de salon</span>
+            <div style="display:flex;gap:5px">
+              <button class="btn btn-ghost btn-sm" id="btn-pick-composition"
+                style="font-size:11px;padding:3px 9px">🛋 Choisir…</button>
+              <button class="btn btn-ghost btn-sm" id="btn-clear-composition"
+                style="font-size:11px;padding:3px 9px;display:none;color:#ef4444">✕ Retirer</button>
+            </div>
+          </div>
+          <div id="composition-preview" style="display:none">
+            <div id="composition-preview-thumb"
+              style="width:100%;height:64px;overflow:hidden;border-radius:5px;background:#f1f5f9;margin-bottom:4px"></div>
+            <div id="composition-preview-name"
+              style="font-size:11px;font-weight:600;color:#1e293b"></div>
+          </div>
+          <div id="composition-empty-hint"
+            style="font-size:11px;color:#94a3b8;font-style:italic">
+            Optionnel — joindre un plan de salon au document
+          </div>
+        </div>
+
         <div class="totals-grid">
           <div class="label">Sous-total HT</div>
           <div class="value" id="dt-subtotal">0,00 €</div>

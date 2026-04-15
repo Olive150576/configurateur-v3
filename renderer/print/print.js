@@ -121,8 +121,37 @@ function renderDocument(doc, company, logo, vatRate) {
     <div class="lines">
       ${renderLinesTable(lines, vatRate)}
     </div>
+    ${renderComposition(doc)}
     ${renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate, company, lines)}
     ${renderFooter(company, doc.type)}
+  `;
+}
+
+// ==================== COMPOSITION ====================
+
+function renderComposition(doc) {
+  if (!doc.composition_svg) return '';
+
+  // Scale the thumbnail SVG to fill a fixed-height band (≈ 160px print)
+  const svgRaw = doc.composition_svg;
+
+  return `
+    <div class="composition-section" style="
+      margin: 12px 0;
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      page-break-inside: avoid;
+    ">
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#64748b;margin-bottom:8px">
+        Composition de salon
+      </div>
+      <div style="width:100%;max-height:180px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f8fafc;border-radius:5px;padding:6px">
+        <div style="width:100%;height:168px;overflow:hidden">
+          ${svgRaw.replace(/<svg/, '<svg style="width:100%;height:168px;object-fit:contain"')}
+        </div>
+      </div>
+    </div>
   `;
 }
 
