@@ -671,10 +671,11 @@ async function saveComposition() {
   const btn = document.getElementById('btn-save');
   btn.disabled = true;
   try {
+    const productLabel = document.getElementById('composition-product').value.trim() || null;
     const res = await window.api.compositions.save({
       id:            currentCompositionId || undefined,
       name,
-      product_id:    document.getElementById('product-select').value || null,
+      product_id:    productLabel,
       modules_json:  JSON.stringify(canvasModules),
       thumbnail_svg: generateThumbnail(),
     });
@@ -707,6 +708,7 @@ async function loadCompositionsList() {
       item.innerHTML = `
         ${thumbHtml}
         <div class="composition-item-name">${escHtml(comp.name)}</div>
+        ${comp.product_id ? `<div class="composition-item-meta" style="color:#c8a96e;font-style:italic">${escHtml(comp.product_id)}</div>` : ''}
         <div class="composition-item-meta">${dateStr}</div>
         <div class="composition-item-actions">
           <button class="btn-xs btn-xs-primary" data-action="load">📂 Charger</button>
@@ -733,6 +735,7 @@ function loadComposition(comp) {
   selectedId = null;
   currentCompositionId = comp.id;
   document.getElementById('composition-name').value = comp.name;
+  document.getElementById('composition-product').value = comp.product_id || '';
   let modules = [];
   try { modules = JSON.parse(comp.modules_json || '[]'); } catch (_) {}
   modules.forEach(mod => {
@@ -762,22 +765,6 @@ async function deleteComposition(id) {
   } catch (err) {
     showToast('Erreur : ' + err.message);
   }
-}
-
-// ── Chargement des produits ────────────────────────────────────────────────────
-
-async function loadProducts() {
-  const sel = document.getElementById('product-select');
-  try {
-    const res = await window.api.products.getAll();
-    if (!res.ok) return;
-    res.data.forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = p.name + (p.collection ? ` — ${p.collection}` : '');
-      sel.appendChild(opt);
-    });
-  } catch (_) {}
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────────
@@ -833,6 +820,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  loadProducts();
   loadCompositionsList();
 });

@@ -283,9 +283,6 @@
 
       <!-- PALETTE GAUCHE -->
       <div class="palette-panel">
-        <select id="product-select">
-          <option value="">— Produit (optionnel) —</option>
-        </select>
 
         <div class="palette-section-title">Canapés</div>
         <div class="palette-grid" id="palette-sofas"></div>
@@ -319,8 +316,11 @@
       <!-- PANNEAU DROIT : sauvegarde -->
       <div class="save-panel">
         <div class="save-panel-title">Enregistrer</div>
-        <input type="text" id="composition-name" placeholder="Nom de la composition…">
-        <button class="btn btn-primary btn-sm" id="btn-save" style="font-size:12px">
+        <input type="text" id="composition-name" placeholder="Nom de la composition…"
+          style="margin-bottom:6px">
+        <input type="text" id="composition-product" placeholder="Modèle / Collection (optionnel)"
+          style="font-size:12px;color:#64748b">
+        <button class="btn btn-primary btn-sm" id="btn-save" style="font-size:12px;margin-top:4px">
           💾 Enregistrer
         </button>
         <hr style="border:none;border-top:1px solid #e2e8f0;margin:2px 0">
