@@ -767,6 +767,54 @@ async function deleteComposition(id) {
   }
 }
 
+// ── Chargement des produits du catalogue ──────────────────────────────────────
+
+async function loadProducts() {
+  const sel = document.getElementById('product-select');
+  try {
+    const res = await window.api.products.getAll();
+    sel.innerHTML = '<option value="">— Produit (optionnel) —</option>';
+    if (!res.ok || !res.data?.length) {
+      if (!res.ok) {
+        const opt = document.createElement('option');
+        opt.disabled = true;
+        opt.textContent = '⚠ Catalogue non disponible';
+        sel.appendChild(opt);
+      }
+      return;
+    }
+    // Regrouper par fournisseur
+    const bySupplier = {};
+    res.data.forEach(p => {
+      const sup = p.supplier_name || 'Autres';
+      if (!bySupplier[sup]) bySupplier[sup] = [];
+      bySupplier[sup].push(p);
+    });
+    Object.entries(bySupplier).sort(([a],[b]) => a.localeCompare(b)).forEach(([sup, products]) => {
+      const grp = document.createElement('optgroup');
+      grp.label = sup;
+      products.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name + (p.collection ? ` — ${p.collection}` : '');
+        grp.appendChild(opt);
+      });
+      sel.appendChild(grp);
+    });
+    // Synchroniser avec le champ texte "composition-product"
+    sel.addEventListener('change', () => {
+      const chosen = res.data.find(p => p.id === sel.value);
+      if (chosen) {
+        document.getElementById('composition-product').value =
+          chosen.name + (chosen.collection ? ` — ${chosen.collection}` : '');
+      }
+    });
+  } catch (e) {
+    sel.innerHTML = '<option value="">— Produit (optionnel) —</option>';
+    console.warn('loadProducts:', e.message);
+  }
+}
+
 // ── Toast ──────────────────────────────────────────────────────────────────────
 
 function showToast(msg) {
@@ -820,5 +868,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  loadProducts();
   loadCompositionsList();
 });
