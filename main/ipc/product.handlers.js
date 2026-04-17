@@ -9,7 +9,7 @@ const { ValidationError } = require('../utils/validator');
 const QRCode = require('qrcode');
 
 function register(ipcMain) {
-  ipcMain.handle('products:getAll',         () => wrap(() => ProductService.getAll()));
+  ipcMain.handle('products:getAll', () => wrap(() => ProductService.getAll()));
   ipcMain.handle('products:getAllArchived', () => wrap(() => ProductService.getAll(true)));
   ipcMain.handle('products:getById',   (_, id) => wrap(() => ProductService.getById(id)));
   ipcMain.handle('products:create',    (_, data) => wrap(() => ProductService.create(data)));

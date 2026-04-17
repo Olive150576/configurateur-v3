@@ -308,14 +308,25 @@ function handlePaletteClick(def) {
 
 // ── Modal saisie dimensions ────────────────────────────────────────────────────
 
-let _modalCallback = null;
-let _modalType     = null;
+let _modalCallback    = null;
+let _modalType        = null;
+let selectedProductData = null;  // produit sélectionné dans le dropdown
+
+// Extrait le nombre de places depuis un nom de gamme ("3 places", "2P", "3 Pl."…)
+function placesFromRangeName(name) {
+  const m = (name || '').match(/(\d+)\s*[Pp](?:l(?:aces?)?)?/);
+  return m ? parseInt(m[1]) : null;
+}
 
 function showDimsModal(def, defaultPlaces, defaultW, defaultD, callback) {
   _modalCallback = callback;
   _modalType     = def.type;
 
-  document.getElementById('places-modal-title').textContent = `Module : ${def.label}`;
+  const prodName = selectedProductData
+    ? (selectedProductData.name + (selectedProductData.collection ? ` — ${selectedProductData.collection}` : ''))
+    : null;
+  document.getElementById('places-modal-title').textContent =
+    prodName ? `${def.label} · ${prodName}` : `Module : ${def.label}`;
 
   // Ligne "nombre de places" : visible uniquement si askPlaces
   const placesRow = document.getElementById('places-row');
@@ -331,6 +342,48 @@ function showDimsModal(def, defaultPlaces, defaultW, defaultD, callback) {
 
   document.getElementById('modal-width').value  = defaultW;
   document.getElementById('modal-depth').value  = defaultD;
+
+  // ── Modules du produit sélectionné ──
+  const rangeSection  = document.getElementById('range-quick-select');
+  const rangeButtons  = document.getElementById('range-buttons');
+  rangeButtons.innerHTML = '';
+
+  const productModules = (selectedProductData?.modules ?? [])
+    .map(m => ({ ...m, dims: parseDimStr(m.dimensions) }));
+
+  if (productModules.length > 0) {
+    rangeSection.style.display = 'block';
+    productModules.forEach(m => {
+      const btn = document.createElement('button');
+      btn.style.cssText = 'padding:4px 9px;font-size:11px;border:1px solid #c8a96e;border-radius:5px;background:white;cursor:pointer;color:#1e293b;white-space:nowrap';
+      // Label : nom + dimensions si disponibles
+      let label = m.name;
+      if (m.dims?.w) label += ` · L.${m.dims.w}`;
+      if (m.dims?.d) label += ` × P.${m.dims.d}`;
+      else if (m.dimensions) label += ` · ${m.dimensions}`;
+      btn.textContent = label;
+      btn.addEventListener('mouseenter', () => btn.style.background = '#fef9f0');
+      btn.addEventListener('mouseleave', () => btn.style.background = 'white');
+      btn.addEventListener('click', () => {
+        // Pré-remplir dimensions si parsables
+        if (m.dims?.w) document.getElementById('modal-width').value = m.dims.w;
+        if (m.dims?.d) document.getElementById('modal-depth').value = m.dims.d;
+        // Pré-remplir places depuis le nom du module
+        const p = placesFromRangeName(m.name);
+        if (p && def.askPlaces) placesInput.value = p;
+        // Highlight bouton actif
+        rangeButtons.querySelectorAll('button').forEach(b => {
+          b.style.background  = 'white';
+          b.style.fontWeight  = 'normal';
+        });
+        btn.style.background  = '#fef3cd';
+        btn.style.fontWeight  = '700';
+      });
+      rangeButtons.appendChild(btn);
+    });
+  } else {
+    rangeSection.style.display = 'none';
+  }
 
   const modal = document.getElementById('places-modal');
   modal.style.display = 'flex';
@@ -801,12 +854,20 @@ async function loadProducts() {
       });
       sel.appendChild(grp);
     });
-    // Synchroniser avec le champ texte "composition-product"
+    // Synchroniser avec le champ texte + stocker les données complètes du produit
     sel.addEventListener('change', () => {
       const chosen = res.data.find(p => p.id === sel.value);
+      selectedProductData = chosen || null;
       if (chosen) {
         document.getElementById('composition-product').value =
           chosen.name + (chosen.collection ? ` — ${chosen.collection}` : '');
+        // Debug : afficher les gammes dans la console
+        console.log('[Compositions] Produit sélectionné :', chosen.name);
+        console.log('[Compositions] Gammes :', JSON.stringify(chosen.ranges?.map(r => ({
+          name: r.name, dimensions: r.dimensions
+        })), null, 2));
+      } else {
+        document.getElementById('composition-product').value = '';
       }
     });
   } catch (e) {
