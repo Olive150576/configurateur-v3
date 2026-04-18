@@ -63,6 +63,12 @@ app.whenReady().then(async () => {
     return;
   }
 
+  // Migration one-shot SQLite → Supabase (s'exécute une seule fois par poste)
+  const MigrationService = require('./services/MigrationService');
+  MigrationService.runIfNeeded().catch(err =>
+    console.error('[Migration] Erreur non bloquante:', err.message)
+  );
+
   // Enregistrer les handlers IPC
   productHandlers.register(ipcMain);
   documentHandlers.register(ipcMain);
