@@ -77,8 +77,8 @@ function create(data) {
       subtotal, discount_percent, discount_amount,
       total, deposit_percent, deposit_amount, balance,
       notes, parent_id,
-      composition_svg, composition_json
-    ) VALUES (?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      composition_svg, composition_json, product_photo
+    ) VALUES (?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id, data.type, data.client_id || null,
     JSON.stringify(data.client_snapshot || {}),
@@ -88,7 +88,8 @@ function create(data) {
     data.notes || '',
     data.parent_id || null,
     data.composition_svg  || null,
-    data.composition_json || null
+    data.composition_json || null,
+    data.product_photo    || null
   );
 
   log('document', id, 'created', { type: data.type });
@@ -116,6 +117,7 @@ function update(id, data) {
       notes = ?,
       composition_svg  = ?,
       composition_json = ?,
+      product_photo    = ?,
       updated_at = datetime('now')
     WHERE id = ?
   `).run(
@@ -133,6 +135,7 @@ function update(id, data) {
     data.notes ?? existing.notes,
     'composition_svg'  in data ? (data.composition_svg  || null) : existing.composition_svg,
     'composition_json' in data ? (data.composition_json || null) : existing.composition_json,
+    'product_photo'    in data ? (data.product_photo    || null) : existing.product_photo,
     id
   );
 

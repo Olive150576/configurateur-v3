@@ -122,6 +122,7 @@ function renderDocument(doc, company, logo, vatRate) {
       ${renderLinesTable(lines, vatRate)}
     </div>
     ${renderComposition(doc)}
+    ${renderProductPhoto(doc)}
     ${renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate, company, lines)}
     ${renderFooter(company, doc.type)}
   `;
@@ -317,9 +318,31 @@ function renderComposition(doc) {
       <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#64748b;margin-bottom:8px">
         Plan de composition
       </div>
-      <div style="width:100%;background:#f8fafc;border-radius:5px;padding:8px;box-sizing:border-box">
+      <div style="width:55%;margin:0 auto;background:#f8fafc;border-radius:5px;padding:8px;box-sizing:border-box">
         ${svgHtml}
       </div>
+    </div>
+  `;
+}
+
+function renderProductPhoto(doc) {
+  if (!doc.product_photo) return '';
+  return `
+    <div style="
+      margin: 12px 0;
+      padding: 10px 14px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      page-break-inside: avoid;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    ">
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#64748b;flex-shrink:0;writing-mode:vertical-rl;transform:rotate(180deg)">
+        Photo
+      </div>
+      <img src="${doc.product_photo}"
+        style="max-height:180px;max-width:100%;object-fit:contain;border-radius:6px;display:block;margin:0 auto">
     </div>
   `;
 }

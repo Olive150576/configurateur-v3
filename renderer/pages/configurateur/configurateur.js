@@ -19,6 +19,7 @@ let state = {
   previewDocId:    null,    // id du brouillon d'aperçu en cours
   delivery:        { enabled: false, amount: 0, amountTTC: 0 },
   selectedComposition: null,  // { id, name, thumbnail_svg, modules_json }
+  selectedPhoto:       null,  // base64 data URI de la photo choisie
 
   // Modal configuration produit
   cfg: {
@@ -92,6 +93,12 @@ function setupHeader() {
     .addEventListener('click', openCompositionPicker);
   document.getElementById('btn-clear-composition')
     .addEventListener('click', clearComposition);
+
+  // Photo du produit
+  document.getElementById('btn-pick-photo')
+    .addEventListener('click', openPhotoPicker);
+  document.getElementById('btn-clear-photo')
+    .addEventListener('click', clearPhoto);
 
   // Livraison
   document.getElementById('f-delivery-enabled').addEventListener('change', e => {
@@ -936,6 +943,85 @@ function clearComposition() {
   document.getElementById('composition-preview-name').textContent = '';
 }
 
+// ==================== PHOTO DU PRODUIT ====================
+
+function openPhotoPicker() {
+  // Collecter toutes les photos des produits présents dans les lignes du devis
+  const photos = [];
+  state.devisLines.forEach(line => {
+    const productPhotos = line.product_config?.photos || [];
+    productPhotos.forEach(p => {
+      if (p.photo && !photos.find(x => x.photo === p.photo)) {
+        photos.push({ photo: p.photo, productName: line.product_config?.name || '' });
+      }
+    });
+  });
+
+  if (photos.length === 0) {
+    Utils.toast('Aucune photo disponible — ajoutez des produits avec des photos au catalogue', 'warning');
+    return;
+  }
+
+  // Modal de sélection
+  let existing = document.getElementById('modal-photo-picker');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-photo-picker';
+  modal.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:2000;align-items:center;justify-content:center';
+
+  const inner = document.createElement('div');
+  inner.style.cssText = 'background:white;border-radius:10px;padding:20px 22px;width:460px;max-width:96vw;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.22)';
+
+  inner.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-weight:700;font-size:14px;color:#1e293b">Choisir une photo</div>
+      <button id="btn-close-photo-picker" style="background:none;border:none;font-size:18px;cursor:pointer;color:#64748b;line-height:1">✕</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      ${photos.map((p, i) => `
+        <div class="photo-pick-item" data-idx="${i}"
+          style="border:1px solid #e2e8f0;border-radius:8px;padding:4px;cursor:pointer;transition:border-color .12s;text-align:center">
+          <img src="${p.photo}" style="width:100%;height:90px;object-fit:contain;border-radius:5px;background:#f8fafc">
+          <div style="font-size:10px;color:#64748b;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.productName}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  modal.appendChild(inner);
+  document.body.appendChild(modal);
+
+  inner.querySelectorAll('.photo-pick-item').forEach(el => {
+    el.addEventListener('mouseenter', () => el.style.borderColor = '#c8a96e');
+    el.addEventListener('mouseleave', () => el.style.borderColor = '#e2e8f0');
+    el.addEventListener('click', () => {
+      const chosen = photos[parseInt(el.dataset.idx)];
+      if (chosen) selectPhoto(chosen.photo);
+      modal.remove();
+    });
+  });
+
+  document.getElementById('btn-close-photo-picker').addEventListener('click', () => modal.remove());
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+function selectPhoto(photoDataUri) {
+  state.selectedPhoto = photoDataUri;
+  document.getElementById('photo-empty-hint').style.display = 'none';
+  document.getElementById('photo-preview').style.display = 'block';
+  document.getElementById('photo-preview-img').src = photoDataUri;
+  document.getElementById('btn-clear-photo').style.display = '';
+}
+
+function clearPhoto() {
+  state.selectedPhoto = null;
+  document.getElementById('photo-empty-hint').style.display = 'block';
+  document.getElementById('photo-preview').style.display = 'none';
+  document.getElementById('photo-preview-img').src = '';
+  document.getElementById('btn-clear-photo').style.display = 'none';
+}
+
 // ==================== SAUVEGARDE ====================
 
 function buildDocData() {
@@ -972,6 +1058,7 @@ function buildDocData() {
     notes:            document.getElementById('f-notes').value.trim(),
     composition_svg:  comp ? comp.thumbnail_svg  : null,
     composition_json: comp ? comp.modules_json   : null,
+    product_photo:    state.selectedPhoto || null,
   };
 }
 
