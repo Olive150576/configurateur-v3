@@ -682,35 +682,35 @@ function initPanZoom() {
 
 function generateThumbnail() {
   if (!canvasModules.length) return '';
-  const TW = 210, TH = 120;
-  const xs = canvasModules.map(m => m.x);
-  const ys = canvasModules.map(m => m.y);
-  const minX = Math.min(...xs) - 10;
-  const minY = Math.min(...ys) - 10;
-  const maxX = Math.max(...canvasModules.map(m => m.x + m.w_cm)) + 10;
-  const maxY = Math.max(...canvasModules.map(m => m.y + m.d_cm)) + 10;
-  const sc   = Math.min(TW / (maxX - minX || 1), TH / (maxY - minY || 1), 1);
 
-  const TABLE_TYPES = ['table-ronde', 'table-carree', 'table-rectangulaire'];
-  const rects = canvasModules.map(m => {
-    const tx = ((m.x - minX) * sc).toFixed(1);
-    const ty = ((m.y - minY) * sc).toFixed(1);
-    const tw = (m.w_cm * sc).toFixed(1);
-    const th = (m.d_cm * sc).toFixed(1);
-    const cx = (parseFloat(tx) + parseFloat(tw) / 2).toFixed(1);
-    const cy = (parseFloat(ty) + parseFloat(th) / 2).toFixed(1);
-    const fill = TABLE_TYPES.includes(m.type) ? '#d4a84b' : S_FILL;
-    const shape = m.type === 'table-ronde'
-      ? `<circle cx="${cx}" cy="${cy}" r="${Math.min(parseFloat(tw),parseFloat(th))/2}"
-           fill="${fill}" opacity="0.80" transform="rotate(${m.rotation},${cx},${cy})"/>`
-      : `<rect x="${tx}" y="${ty}" width="${tw}" height="${th}"
-           rx="2" fill="${fill}" opacity="0.80" transform="rotate(${m.rotation},${cx},${cy})"/>`;
-    return shape;
-  }).join('');
+  const PAD  = 10;
+  const minX = Math.min(...canvasModules.map(m => m.x)) - PAD;
+  const minY = Math.min(...canvasModules.map(m => m.y)) - PAD;
+  const maxX = Math.max(...canvasModules.map(m => m.x + m.w_cm)) + PAD;
+  const maxY = Math.max(...canvasModules.map(m => m.y + m.d_cm)) + PAD;
+  const vw   = maxX - minX;
+  const vh   = maxY - minY;
 
-  return `<svg viewBox="0 0 ${TW} ${TH}" xmlns="http://www.w3.org/2000/svg">
-    <rect width="${TW}" height="${TH}" fill="#f8f8f8" rx="3"/>
-    ${rects}
+  // SVG imbriqués : fidèles au canvas (accoudoirs, dossiers, dimensions)
+  const pieces = canvasModules.map(m => {
+    const tx  = m.x - minX;
+    const ty  = m.y - minY;
+    const cx  = tx + m.w_cm / 2;
+    const cy  = ty + m.d_cm / 2;
+    const rot = m.rotation || 0;
+    const inner = svgForModule(m)
+      .replace(/^<svg[^>]*>/, '')
+      .replace(/<\/svg>\s*$/, '');
+    return `<g transform="rotate(${rot},${cx},${cy})">
+      <svg x="${tx}" y="${ty}" width="${m.w_cm}" height="${m.d_cm}" viewBox="0 0 ${m.w_cm} ${m.d_cm}" overflow="visible">
+        ${inner}
+      </svg>
+    </g>`;
+  }).join('\n');
+
+  return `<svg viewBox="0 0 ${vw} ${vh}" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">
+    <rect width="${vw}" height="${vh}" fill="#f8fafc" rx="3"/>
+    ${pieces}
   </svg>`;
 }
 

@@ -128,28 +128,197 @@ function renderDocument(doc, company, logo, vatRate) {
 }
 
 // ==================== COMPOSITION ====================
+// Fonctions de génération SVG — identiques à compositions.js (vue de dessus, 1px=1cm)
+
+(function() {
+  const ARM    = 10;
+  const BH     = 12;
+  const S_FILL = '#c8a96e';
+  const DARK   = '#1C1410';
+
+  function _lbl(cx, cy, n, w, d, hasRelax) {
+    const fs  = Math.max(8, Math.min(13, Math.round(w * 0.09)));
+    const fs2 = Math.max(7, fs - 1);
+    const relax = hasRelax
+      ? `<text x="${cx}" y="${cy - fs - 3}" font-family="sans-serif" font-size="${fs + 2}" text-anchor="middle">⚡</text>` : '';
+    return `${relax}
+      <text x="${cx}" y="${cy}" font-family="sans-serif" font-size="${fs}" fill="white" text-anchor="middle" font-weight="700">${n}P · ${w}cm</text>
+      <text x="${cx}" y="${cy + fs2 + 2}" font-family="sans-serif" font-size="${fs2}" fill="rgba(255,255,255,0.75)" text-anchor="middle">${w}×${d}cm</text>`;
+  }
+
+  function _sofaFull(n, w, d, r) {
+    const sw = w - ARM * 2;
+    return `<rect x="${ARM}" y="0" width="${sw}" height="${d}" rx="3" fill="${S_FILL}" opacity="0.85"/>
+      <rect x="${ARM}" y="0" width="${sw}" height="${BH}" rx="3" fill="${DARK}" opacity="0.65"/>
+      <rect x="0" y="0" width="${ARM}" height="${d}" rx="2" fill="${DARK}" opacity="0.50"/>
+      <rect x="${w - ARM}" y="0" width="${ARM}" height="${d}" rx="2" fill="${DARK}" opacity="0.50"/>
+      ${_lbl(w / 2, d * 0.55, n, w, d, r)}`;
+  }
+  function _batardLeft(n, w, d, r) {
+    const sw = w - ARM;
+    return `<rect x="${ARM}" y="0" width="${sw}" height="${d}" rx="3" fill="${S_FILL}" opacity="0.85"/>
+      <rect x="${ARM}" y="0" width="${sw}" height="${BH}" rx="3" fill="${DARK}" opacity="0.65"/>
+      <rect x="0" y="0" width="${ARM}" height="${d}" rx="2" fill="${DARK}" opacity="0.50"/>
+      ${_lbl(ARM + sw / 2, d * 0.55, n, w, d, r)}`;
+  }
+  function _batardRight(n, w, d, r) {
+    const sw = w - ARM;
+    return `<rect x="0" y="0" width="${sw}" height="${d}" rx="3" fill="${S_FILL}" opacity="0.85"/>
+      <rect x="0" y="0" width="${sw}" height="${BH}" rx="3" fill="${DARK}" opacity="0.65"/>
+      <rect x="${sw}" y="0" width="${ARM}" height="${d}" rx="2" fill="${DARK}" opacity="0.50"/>
+      ${_lbl(sw / 2, d * 0.55, n, w, d, r)}`;
+  }
+  function _sansAccoudoir(n, w, d, r) {
+    return `<rect x="0" y="0" width="${w}" height="${d}" rx="3" fill="${S_FILL}" opacity="0.85"/>
+      <rect x="0" y="0" width="${w}" height="${BH}" rx="3" fill="${DARK}" opacity="0.65"/>
+      ${_lbl(w / 2, d * 0.55, n, w, d, r)}`;
+  }
+  function _angleLeft(w, d) {
+    const S = Math.min(w, d);
+    const fs = Math.max(8, Math.round(S * 0.14));
+    return `<rect x="0" y="0" width="${S}" height="${S}" rx="3" fill="${S_FILL}" opacity="0.85"/>
+      <rect x="0" y="0" width="${S}" height="${BH}" rx="3" fill="${DARK}" opacity="0.65"/>
+      <rect x="0" y="0" width="${BH}" height="${S}" rx="3" fill="${DARK}" opacity="0.65"/>
+      <text x="${S * 0.6}" y="${S * 0.52}" font-family="sans-serif" font-size="${fs}" fill="white" text-anchor="middle" font-weight="700">∟G</text>
+      <text x="${S * 0.6}" y="${S * 0.52 + fs + 2}" font-family="sans-serif" font-size="${Math.max(7, Math.round(S * 0.11))}" fill="rgba(255,255,255,0.75)" text-anchor="middle">${S}×${S}cm</text>`;
+  }
+  function _angleRight(w, d) {
+    const S = Math.min(w, d);
+    const fs = Math.max(8, Math.round(S * 0.14));
+    return `<rect x="0" y="0" width="${S}" height="${S}" rx="3" fill="${S_FILL}" opacity="0.85"/>
+      <rect x="0" y="0" width="${S}" height="${BH}" rx="3" fill="${DARK}" opacity="0.65"/>
+      <rect x="${S - BH}" y="0" width="${BH}" height="${S}" rx="3" fill="${DARK}" opacity="0.65"/>
+      <text x="${S * 0.4}" y="${S * 0.52}" font-family="sans-serif" font-size="${fs}" fill="white" text-anchor="middle" font-weight="700">∟D</text>
+      <text x="${S * 0.4}" y="${S * 0.52 + fs + 2}" font-family="sans-serif" font-size="${Math.max(7, Math.round(S * 0.11))}" fill="rgba(255,255,255,0.75)" text-anchor="middle">${S}×${S}cm</text>`;
+  }
+  function _merienneRight(w, d) {
+    const sw = w - ARM;
+    const fs = Math.max(8, Math.round(w * 0.11));
+    return `<rect x="0" y="0" width="${sw}" height="${d}" rx="3" fill="${S_FILL}" opacity="0.85"/>
+      <rect x="0" y="0" width="${sw}" height="${BH}" rx="3" fill="${DARK}" opacity="0.65"/>
+      <rect x="${sw}" y="0" width="${ARM}" height="${w}" rx="2" fill="${DARK}" opacity="0.50"/>
+      <text x="${sw / 2}" y="${d * 0.55}" font-family="sans-serif" font-size="${fs}" fill="white" text-anchor="middle" font-weight="700">MÉR.D</text>
+      <text x="${sw / 2}" y="${d * 0.55 + fs + 3}" font-family="sans-serif" font-size="${Math.max(7, Math.round(w * 0.09))}" fill="rgba(255,255,255,0.75)" text-anchor="middle">${d}cm</text>`;
+  }
+  function _merienneLeft(w, d) {
+    const sw = w - ARM;
+    const fs = Math.max(8, Math.round(w * 0.11));
+    return `<rect x="0" y="0" width="${ARM}" height="${w}" rx="2" fill="${DARK}" opacity="0.50"/>
+      <rect x="${ARM}" y="0" width="${sw}" height="${d}" rx="3" fill="${S_FILL}" opacity="0.85"/>
+      <rect x="${ARM}" y="0" width="${sw}" height="${BH}" rx="3" fill="${DARK}" opacity="0.65"/>
+      <text x="${ARM + sw / 2}" y="${d * 0.55}" font-family="sans-serif" font-size="${fs}" fill="white" text-anchor="middle" font-weight="700">MÉR.G</text>
+      <text x="${ARM + sw / 2}" y="${d * 0.55 + fs + 3}" font-family="sans-serif" font-size="${Math.max(7, Math.round(w * 0.09))}" fill="rgba(255,255,255,0.75)" text-anchor="middle">${d}cm</text>`;
+  }
+  function _pouf(w, d) {
+    const fs = Math.max(8, Math.round(w * 0.12));
+    return `<rect x="2" y="2" width="${w - 4}" height="${d - 4}" rx="8" fill="${S_FILL}" opacity="0.85"/>
+      <text x="${w / 2}" y="${d * 0.48}" font-family="sans-serif" font-size="${fs}" fill="white" text-anchor="middle" font-weight="700">POUF</text>
+      <text x="${w / 2}" y="${d * 0.48 + fs + 2}" font-family="sans-serif" font-size="${Math.max(7, fs - 1)}" fill="rgba(255,255,255,0.75)" text-anchor="middle">${w}×${d}cm</text>`;
+  }
+  function _tableRonde(w, d) {
+    const r = Math.round(Math.min(w, d) / 2) - 2;
+    const cx = w / 2, cy = d / 2;
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#d4a84b" opacity="0.55" stroke="#a07830" stroke-width="1.5"/>
+      <circle cx="${cx}" cy="${cy}" r="${Math.round(r * 0.7)}" fill="none" stroke="#a07830" stroke-width="1" opacity="0.35"/>
+      <text x="${cx}" y="${cy - 4}" font-family="sans-serif" font-size="${Math.max(7, Math.round(r * 0.2))}" fill="#5a3e10" text-anchor="middle" font-weight="700">TABLE</text>
+      <text x="${cx}" y="${cy + Math.max(7, Math.round(r * 0.2)) + 2}" font-family="sans-serif" font-size="${Math.max(6, Math.round(r * 0.17))}" fill="#5a3e10" text-anchor="middle">⌀${w}cm</text>`;
+  }
+  function _tableCarree(w, d) {
+    return `<rect x="2" y="2" width="${w - 4}" height="${d - 4}" rx="5" fill="#d4a84b" opacity="0.55" stroke="#a07830" stroke-width="1.5"/>
+      <rect x="8" y="8" width="${w - 16}" height="${d - 16}" rx="3" fill="none" stroke="#a07830" stroke-width="1" opacity="0.35"/>
+      <text x="${w / 2}" y="${d / 2 - 3}" font-family="sans-serif" font-size="${Math.max(7, Math.round(w * 0.1))}" fill="#5a3e10" text-anchor="middle" font-weight="700">TABLE</text>
+      <text x="${w / 2}" y="${d / 2 + Math.max(7, Math.round(w * 0.1)) + 1}" font-family="sans-serif" font-size="${Math.max(6, Math.round(w * 0.09))}" fill="#5a3e10" text-anchor="middle">${w}×${d}cm</text>`;
+  }
+  function _tableRect(w, d) {
+    return `<rect x="2" y="2" width="${w - 4}" height="${d - 4}" rx="5" fill="#d4a84b" opacity="0.55" stroke="#a07830" stroke-width="1.5"/>
+      <rect x="8" y="8" width="${w - 16}" height="${d - 16}" rx="3" fill="none" stroke="#a07830" stroke-width="1" opacity="0.35"/>
+      <text x="${w / 2}" y="${d / 2 - 3}" font-family="sans-serif" font-size="${Math.max(7, Math.round(d * 0.14))}" fill="#5a3e10" text-anchor="middle" font-weight="700">TABLE</text>
+      <text x="${w / 2}" y="${d / 2 + Math.max(7, Math.round(d * 0.14)) + 1}" font-family="sans-serif" font-size="${Math.max(6, Math.round(d * 0.12))}" fill="#5a3e10" text-anchor="middle">${w}×${d}cm</text>`;
+  }
+
+  function _innerSvg(mod) {
+    const { type, places: n, w_cm: w, d_cm: d, hasRelax: r } = mod;
+    switch (type) {
+      case 'sofa-full':           return _sofaFull(n, w, d, r);
+      case 'batard-left':         return _batardLeft(n, w, d, r);
+      case 'batard-right':        return _batardRight(n, w, d, r);
+      case 'sans-accoudoir':      return _sansAccoudoir(n, w, d, r);
+      case 'angle-left':          return _angleLeft(w, d);
+      case 'angle-right':         return _angleRight(w, d);
+      case 'meridienne-left':     return _merienneLeft(w, d);
+      case 'meridienne-right':    return _merienneRight(w, d);
+      case 'pouf':                return _pouf(w, d);
+      case 'table-ronde':         return _tableRonde(w, d);
+      case 'table-carree':        return _tableCarree(w, d);
+      case 'table-rectangulaire': return _tableRect(w, d);
+      default: return '';
+    }
+  }
+
+  /**
+   * Reconstruit un SVG fidèle au canvas depuis le tableau de modules JSON.
+   * Utilise des <svg> imbriqués (SVG 1.1 nested) pour positionner et redimensionner chaque module.
+   */
+  window._buildCompositionSVG = function(modulesJson) {
+    let mods;
+    try { mods = JSON.parse(modulesJson || '[]'); } catch { return ''; }
+    if (!mods.length) return '';
+
+    const PAD = 15;
+    const minX = Math.min(...mods.map(m => m.x)) - PAD;
+    const minY = Math.min(...mods.map(m => m.y)) - PAD;
+    const maxX = Math.max(...mods.map(m => m.x + m.w_cm)) + PAD;
+    const maxY = Math.max(...mods.map(m => m.y + m.d_cm)) + PAD;
+    const vw = maxX - minX;
+    const vh = maxY - minY;
+
+    const pieces = mods.map(m => {
+      const tx = m.x - minX;
+      const ty = m.y - minY;
+      const cx = tx + m.w_cm / 2;
+      const cy = ty + m.d_cm / 2;
+      const rot = m.rotation || 0;
+      const inner = _innerSvg(m);
+      return `<g transform="rotate(${rot},${cx},${cy})">
+        <svg x="${tx}" y="${ty}" width="${m.w_cm}" height="${m.d_cm}" viewBox="0 0 ${m.w_cm} ${m.d_cm}" overflow="visible">
+          ${inner}
+        </svg>
+      </g>`;
+    }).join('\n');
+
+    return `<svg viewBox="0 0 ${vw} ${vh}" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">
+      <rect width="${vw}" height="${vh}" fill="#f8fafc" rx="4"/>
+      ${pieces}
+    </svg>`;
+  };
+})();
 
 function renderComposition(doc) {
-  if (!doc.composition_svg) return '';
+  if (!doc.composition_svg && !doc.composition_json) return '';
 
-  // Scale the thumbnail SVG to fill a fixed-height band (≈ 160px print)
-  const svgRaw = doc.composition_svg;
+  // Reconstruction fidèle depuis le JSON si disponible, sinon fallback thumbnail
+  let svgHtml = '';
+  if (doc.composition_json && typeof window._buildCompositionSVG === 'function') {
+    svgHtml = window._buildCompositionSVG(doc.composition_json);
+  }
+  if (!svgHtml && doc.composition_svg) {
+    svgHtml = doc.composition_svg.replace(/<svg/, '<svg style="width:100%;display:block"');
+  }
+  if (!svgHtml) return '';
 
   return `
     <div class="composition-section" style="
       margin: 12px 0;
-      padding: 10px 12px;
+      padding: 10px 14px;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
       page-break-inside: avoid;
     ">
       <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#64748b;margin-bottom:8px">
-        Composition de salon
+        Plan de composition
       </div>
-      <div style="width:100%;max-height:180px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f8fafc;border-radius:5px;padding:6px">
-        <div style="width:100%;height:168px;overflow:hidden">
-          ${svgRaw.replace(/<svg/, '<svg style="width:100%;height:168px;object-fit:contain"')}
-        </div>
+      <div style="width:100%;background:#f8fafc;border-radius:5px;padding:8px;box-sizing:border-box">
+        ${svgHtml}
       </div>
     </div>
   `;
