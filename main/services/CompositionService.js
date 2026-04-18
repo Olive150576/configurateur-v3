@@ -1,48 +1,62 @@
 'use strict';
 
-const { getDb } = require('../db/database');
+/**
+ * CompositionService — CRUD compositions (Supabase)
+ */
 
-function getAll() {
-  const db = getDb();
-  return db.prepare(
-    'SELECT id, name, product_id, modules_json, thumbnail_svg, created_at, updated_at FROM compositions ORDER BY updated_at DESC'
-  ).all();
+const { getSupabase } = require('../db/supabase');
+
+function sbErr(error) {
+  throw new Error(error.message || 'Erreur Supabase');
 }
 
-function getById(id) {
-  const db = getDb();
-  return db.prepare('SELECT * FROM compositions WHERE id = ?').get(id) || null;
+async function getAll() {
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from('compositions')
+    .select('id, name, product_id, modules_json, thumbnail_svg, created_at, updated_at')
+    .order('updated_at', { ascending: false });
+  if (error) sbErr(error);
+  return data || [];
 }
 
-function save(data) {
-  const db = getDb();
+async function getById(id) {
+  const sb = getSupabase();
+  const { data, error } = await sb.from('compositions').select('*').eq('id', id).single();
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    sbErr(error);
+  }
+  return data;
+}
+
+async function save(data) {
   if (!data.name || !String(data.name).trim()) throw new Error('Le nom de la composition est requis');
 
-  const name         = String(data.name).trim();
-  const product_id   = data.product_id   || null;
-  const modules_json = data.modules_json || '[]';
-  const thumbnail    = data.thumbnail_svg || null;
+  const sb      = getSupabase();
+  const payload = {
+    name:          String(data.name).trim(),
+    product_id:    data.product_id    || null,
+    modules_json:  data.modules_json  || '[]',
+    thumbnail_svg: data.thumbnail_svg || null,
+    updated_at:    new Date().toISOString(),
+  };
 
   if (data.id) {
-    db.prepare(`
-      UPDATE compositions
-      SET name = ?, product_id = ?, modules_json = ?, thumbnail_svg = ?, updated_at = datetime('now')
-      WHERE id = ?
-    `).run(name, product_id, modules_json, thumbnail, data.id);
+    const { error } = await sb.from('compositions').update(payload).eq('id', data.id);
+    if (error) sbErr(error);
     return getById(data.id);
   } else {
-    const result = db.prepare(`
-      INSERT INTO compositions (name, product_id, modules_json, thumbnail_svg)
-      VALUES (?, ?, ?, ?)
-    `).run(name, product_id, modules_json, thumbnail);
-    return getById(result.lastInsertRowid);
+    const { data: inserted, error } = await sb.from('compositions').insert(payload).select().single();
+    if (error) sbErr(error);
+    return inserted;
   }
 }
 
-function remove(id) {
-  const db = getDb();
-  const r = db.prepare('DELETE FROM compositions WHERE id = ?').run(id);
-  if (r.changes === 0) throw new Error(`Composition ${id} introuvable`);
+async function remove(id) {
+  const sb = getSupabase();
+  const { error } = await sb.from('compositions').delete().eq('id', id);
+  if (error) sbErr(error);
   return true;
 }
 
