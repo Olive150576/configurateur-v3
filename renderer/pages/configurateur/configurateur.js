@@ -946,13 +946,16 @@ function clearComposition() {
 // ==================== PHOTO DU PRODUIT ====================
 
 function openPhotoPicker() {
-  // Collecter toutes les photos des produits présents dans les lignes du devis
+  // Retrouver les photos depuis state.products en utilisant le product_id de chaque ligne
   const photos = [];
   state.devisLines.forEach(line => {
-    const productPhotos = line.product_config?.photos || [];
-    productPhotos.forEach(p => {
+    const productId = line.product_config?.product_id;
+    if (!productId) return;
+    const product = state.products.find(p => p.id === productId);
+    if (!product) return;
+    (product.photos || []).forEach(p => {
       if (p.photo && !photos.find(x => x.photo === p.photo)) {
-        photos.push({ photo: p.photo, productName: line.product_config?.name || '' });
+        photos.push({ photo: p.photo, productName: product.name || '' });
       }
     });
   });
