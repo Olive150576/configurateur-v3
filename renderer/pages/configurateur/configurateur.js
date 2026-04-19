@@ -680,9 +680,13 @@ function handleAddConfig() {
     ecoHT = round2(range?.eco_participation || product.eco_participation || 0);
   }
 
-  // applyRounding s'applique sur le prix SANS éco, puis on ajoute l'éco
-  // → l'éco n'est jamais arrondie, quel que soit le mode
-  const productTTC     = applyRounding(round2(base * coeff) + modulesTotalSansEco + optionsTotal, mode);
+  // Si des modules sont sélectionnés, leurs prix TTC sont déjà calculés individuellement (round2).
+  // Appliquer applyRounding sur le total SANS éco décalerait le unitPriceTTC par rapport aux
+  // unit_price stockés dans chaque module → incohérence ligne vs totaux dans le PDF.
+  // → applyRounding ne s'applique qu'aux lignes SANS modules (prix de gamme simple).
+  const productTTC = selectedModules.length > 0
+    ? round2(round2(base * coeff) + modulesTotalSansEco + optionsTotal)
+    : applyRounding(round2(base * coeff) + modulesTotalSansEco + optionsTotal, mode);
   const unitPriceTTC   = round2(productTTC + ecoHT);
   const unitPrice      = round2(unitPriceTTC / (1 + state.vatRate / 100));
   const lineTotal      = round2(unitPrice * qty);

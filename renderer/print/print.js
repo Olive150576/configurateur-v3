@@ -102,13 +102,52 @@ function setupToolbar(doc) {
 
 // ==================== RENDER ====================
 
+/**
+ * Calcule le TTC brut réel en sommant les TTC par article.
+ * Plus précis que subtotalHT × (1+tva) car préserve les arrondis par ligne.
+ * - Modules : unit_price stocké en TTC (avec éco)
+ * - Options  : price stocké en TTC
+ * - Ligne simple (sans modules) : unit_price en HT → converti en TTC
+ * - Livraison : unit_price en HT → converti en TTC
+ */
+function computeTrueTTC(lines, vatRate) {
+  let sum = 0;
+  lines.forEach(line => {
+    if (line.is_eco) return;
+    const mods = line.product_config?.modules ?? [];
+    const opts = line.product_config?.options ?? [];
+    const qty  = line.qty || 1;
+    if (line.is_delivery) {
+      sum += r2(line.unit_price * (1 + vatRate / 100));
+      return;
+    }
+    if (mods.length > 0) {
+      mods.forEach(m => { sum += r2((m.unit_price ?? 0) * (m.qty || 1)); });
+      opts.forEach(o  => { sum += r2((o.price      ?? 0) * (o.qty || 1)); });
+    } else {
+      sum += r2(line.unit_price * qty * (1 + vatRate / 100));
+    }
+  });
+  return r2(sum);
+}
+
 function renderDocument(doc, company, logo, vatRate) {
-  const lines         = doc.product_snapshot?.lines ?? [];
-  const client        = doc.client_snapshot ?? {};
-  const subtotalHT    = doc.subtotal ?? 0;
-  const vatAmt        = r2(subtotalHT * vatRate / 100);
-  const totalTTC_brut = r2(subtotalHT + vatAmt);
-  const netTTC        = doc.total ?? 0;   // Net TTC après remise
+  const lines      = doc.product_snapshot?.lines ?? [];
+  const client     = doc.client_snapshot ?? {};
+  const subtotalHT = doc.subtotal ?? 0;
+
+  // TTC brut recalculé depuis les articles (évite l'écart d'arrondi HT→TTC)
+  const computedTTC   = computeTrueTTC(lines, vatRate);
+  const totalTTC_brut = computedTTC > 0 ? computedTTC : r2(subtotalHT * (1 + vatRate / 100));
+  const vatAmt        = r2(totalTTC_brut - subtotalHT);
+
+  // Remise et net recalculés sur la base TTC correcte (cohérence visuelle)
+  const discPct       = doc.discount_percent ?? 0;
+  const storedDisc    = doc.discount_amount  ?? 0;
+  const discAmt       = storedDisc > 0
+    ? (discPct > 0 ? r2(totalTTC_brut * discPct / 100) : Math.min(storedDisc, totalTTC_brut))
+    : 0;
+  const netTTC        = discAmt > 0 ? r2(totalTTC_brut - discAmt) : (doc.total ?? 0);
 
   const info = extractHeaderInfo(lines);
 
@@ -121,8 +160,7 @@ function renderDocument(doc, company, logo, vatRate) {
     <div class="lines">
       ${renderLinesTable(lines, vatRate)}
     </div>
-    ${renderComposition(doc)}
-    ${renderProductPhoto(doc)}
+    ${renderCompositionAndPhoto(doc)}
     ${renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate, company, lines)}
     ${renderFooter(company, doc.type)}
   `;
@@ -294,55 +332,61 @@ function renderDocument(doc, company, logo, vatRate) {
   };
 })();
 
-function renderComposition(doc) {
-  if (!doc.composition_svg && !doc.composition_json) return '';
+/**
+ * Affiche la composition et la photo dans un seul cadre côte à côte.
+ * Si seulement l'un des deux est présent, il prend toute la largeur.
+ */
+function renderCompositionAndPhoto(doc) {
+  const hasCompo = !!(doc.composition_svg || doc.composition_json);
+  const hasPhoto = !!doc.product_photo;
+  if (!hasCompo && !hasPhoto) return '';
 
-  // Reconstruction fidèle depuis le JSON si disponible, sinon fallback thumbnail
+  // SVG composition
   let svgHtml = '';
-  if (doc.composition_json && typeof window._buildCompositionSVG === 'function') {
-    svgHtml = window._buildCompositionSVG(doc.composition_json);
+  if (hasCompo) {
+    if (doc.composition_json && typeof window._buildCompositionSVG === 'function') {
+      svgHtml = window._buildCompositionSVG(doc.composition_json);
+    }
+    if (!svgHtml && doc.composition_svg) {
+      svgHtml = doc.composition_svg.replace(/<svg/, '<svg style="width:100%;display:block"');
+    }
   }
-  if (!svgHtml && doc.composition_svg) {
-    svgHtml = doc.composition_svg.replace(/<svg/, '<svg style="width:100%;display:block"');
-  }
-  if (!svgHtml) return '';
 
-  return `
-    <div class="composition-section" style="
-      margin: 12px 0;
-      padding: 10px 14px;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      page-break-inside: avoid;
-    ">
-      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#64748b;margin-bottom:8px">
+  const compoBlock = svgHtml ? `
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center">
+      <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#64748b;margin-bottom:6px">
         Plan de composition
       </div>
-      <div style="width:55%;margin:0 auto;background:#f8fafc;border-radius:5px;padding:8px;box-sizing:border-box">
+      <div style="width:100%;max-width:220px;background:#f8fafc;border-radius:5px;padding:6px;box-sizing:border-box">
         ${svgHtml}
       </div>
     </div>
-  `;
-}
+  ` : '';
 
-function renderProductPhoto(doc) {
-  if (!doc.product_photo) return '';
+  const photoBlock = hasPhoto ? `
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center">
+      <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#64748b;margin-bottom:6px">
+        Photo
+      </div>
+      <img src="${doc.product_photo}"
+        style="max-height:160px;max-width:100%;object-fit:contain;border-radius:5px;display:block">
+    </div>
+  ` : '';
+
   return `
     <div style="
-      margin: 12px 0;
+      margin: 10px 0;
       padding: 10px 14px;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
       page-break-inside: avoid;
       display: flex;
-      align-items: center;
-      gap: 14px;
+      gap: 16px;
+      align-items: flex-start;
+      justify-content: center;
     ">
-      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#64748b;flex-shrink:0;writing-mode:vertical-rl;transform:rotate(180deg)">
-        Photo
-      </div>
-      <img src="${doc.product_photo}"
-        style="max-height:180px;max-width:100%;object-fit:contain;border-radius:6px;display:block;margin:0 auto">
+      ${compoBlock}
+      ${photoBlock}
     </div>
   `;
 }
@@ -587,11 +631,10 @@ function renderRow(idx, name, qty, unitHT, vatRate, isOption = false, colorRef =
 function renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate, company = {}, lines = []) {
   const docType = doc.type;
   const discPct    = doc.discount_percent ?? 0;
-  const discAmt    = doc.discount_amount  ?? 0;
+  // discAmt et regularTTC dérivés des valeurs passées (déjà recalculées depuis les articles)
+  const discAmt    = r2(totalTTC_brut - netTTC);
   const discLabel  = (discPct > 0 && Number.isInteger(discPct)) ? `Remise ${discPct}%` : 'Remise';
-
-  const regularVat = r2(subtotalHT * vatRate / 100);
-  const regularTTC = r2(subtotalHT + regularVat);
+  const regularTTC = totalTTC_brut;
 
   // Acompte : utiliser deposit_amount directement (TTC), sinon recalculer sur netTTC
   const depositTTC = doc.deposit_amount > 0
