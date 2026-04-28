@@ -32,6 +32,99 @@ let state = {
   },
 };
 
+// ==================== DRAFT (persistance localStorage) ====================
+
+const DRAFT_KEY = 'cfg_draft_v1';
+
+function saveDraft() {
+  try {
+    const discInEur = document.getElementById('discount-mode-eur').classList.contains('active');
+    const depInEur  = document.getElementById('deposit-mode-eur').classList.contains('active');
+    const draft = {
+      devisLines:          state.devisLines,
+      selectedClient:      state.selectedClient,
+      clientInputValue:    document.getElementById('f-client').value,
+      delivery:            state.delivery,
+      selectedComposition: state.selectedComposition,
+      selectedPhoto:       state.selectedPhoto,
+      discountValue:       document.getElementById('f-discount').value,
+      discountMode:        discInEur ? 'eur' : 'pct',
+      depositValue:        document.getElementById('f-deposit').value,
+      depositMode:         depInEur  ? 'eur' : 'pct',
+      notes:               document.getElementById('f-notes').value,
+      docType:             document.getElementById('f-doc-type').value,
+    };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch (_) {}
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+}
+
+function restoreDraft() {
+  let draft;
+  try { draft = JSON.parse(localStorage.getItem(DRAFT_KEY)); } catch (_) {}
+  if (!draft || !draft.devisLines?.length) return;
+
+  state.devisLines         = draft.devisLines;
+  state.selectedClient     = draft.selectedClient  || null;
+  state.selectedComposition = draft.selectedComposition || null;
+  state.selectedPhoto      = draft.selectedPhoto   || null;
+  state.delivery           = draft.delivery        || { enabled: false, amount: 0, amountTTC: 0 };
+
+  // Restaurer les champs DOM
+  if (draft.docType) document.getElementById('f-doc-type').value = draft.docType;
+
+  if (draft.clientInputValue) document.getElementById('f-client').value = draft.clientInputValue;
+
+  // Remise
+  const discInp = document.getElementById('f-discount');
+  if (draft.discountMode === 'eur') {
+    document.getElementById('discount-mode-eur').classList.add('active');
+    document.getElementById('discount-mode-pct').classList.remove('active');
+    discInp.removeAttribute('max'); discInp.step = 1;
+  } else {
+    document.getElementById('discount-mode-pct').classList.add('active');
+    document.getElementById('discount-mode-eur').classList.remove('active');
+    discInp.max = 100; discInp.step = 0.1;
+  }
+  discInp.value = draft.discountValue || 0;
+
+  // Acompte
+  const depInp = document.getElementById('f-deposit');
+  if (draft.depositMode === 'eur') {
+    document.getElementById('deposit-mode-eur').classList.add('active');
+    document.getElementById('deposit-mode-pct').classList.remove('active');
+    depInp.removeAttribute('max'); depInp.step = 1;
+  } else {
+    document.getElementById('deposit-mode-pct').classList.add('active');
+    document.getElementById('deposit-mode-eur').classList.remove('active');
+    depInp.max = 100; depInp.step = 1;
+  }
+  depInp.value = draft.depositValue || 0;
+
+  if (draft.notes) document.getElementById('f-notes').value = draft.notes;
+
+  // Livraison
+  document.getElementById('f-delivery-enabled').checked = state.delivery.enabled;
+  document.getElementById('delivery-amount-wrap').style.display = state.delivery.enabled ? 'flex' : 'none';
+  if (state.delivery.enabled && state.delivery.amountTTC > 0) {
+    document.getElementById('f-delivery-amount').value = state.delivery.amountTTC;
+  }
+
+  // Composition
+  if (state.selectedComposition) selectComposition(state.selectedComposition);
+
+  // Photo
+  if (state.selectedPhoto) selectPhoto(state.selectedPhoto);
+
+  renderDevisLines();
+  recalcDevisTotals();
+
+  Utils.toast('Brouillon en cours restauré', 'info');
+}
+
 // ==================== INITIALISATION ====================
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -41,6 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const vatRes = await window.api.app.getConfig('vat_rate');
   state.vatRate = parseFloat(vatRes?.data ?? 20) || 20;
   await Promise.all([loadProducts(), loadClients()]);
+  restoreDraft();
 });
 
 function setupHeader() {
@@ -57,6 +151,10 @@ function setupHeader() {
     .addEventListener('input', recalcDevisTotals);
   document.getElementById('f-deposit')
     .addEventListener('input', recalcDevisTotals);
+  document.getElementById('f-notes')
+    .addEventListener('input', saveDraft);
+  document.getElementById('f-doc-type')
+    .addEventListener('change', saveDraft);
 
   // Mode toggles %/€ pour remise et acompte
   document.getElementById('discount-mode-pct').addEventListener('click', () => {
@@ -304,7 +402,7 @@ function renderCatalog(products) {
 
 function handleClientInput() {
   const val = document.getElementById('f-client').value.trim();
-  if (!val) { state.selectedClient = null; return; }
+  if (!val) { state.selectedClient = null; saveDraft(); return; }
   const match = state.clients.find(c =>
     c.name === val || `${c.name} (${c.company})` === val);
   if (match) {
@@ -316,6 +414,7 @@ function handleClientInput() {
   } else {
     state.selectedClient = { name: val };
   }
+  saveDraft();
 }
 
 // ==================== NOUVEAU CLIENT ====================
@@ -362,6 +461,7 @@ async function handleSaveNewClient() {
     document.getElementById('f-client').value = label;
   }
 
+  saveDraft();
   Utils.toast(`Client "${name}" créé`, 'success');
   closeNewClientModal();
 }
@@ -859,6 +959,7 @@ function recalcDevisTotals() {
   document.getElementById('dt-total').textContent     = Utils.formatPrice(netTTC);
   document.getElementById('dt-deposit').textContent   = Utils.formatPrice(depositAmt) + ' TTC';
   document.getElementById('dt-balance').textContent   = Utils.formatPrice(balance) + ' TTC';
+  saveDraft();
 }
 
 // ==================== COMPOSITION DE SALON ====================
@@ -922,6 +1023,7 @@ async function openCompositionPicker() {
 
 function selectComposition(comp) {
   state.selectedComposition = comp;
+  saveDraft();
 
   document.getElementById('composition-empty-hint').style.display = 'none';
   document.getElementById('composition-preview').style.display = 'block';
@@ -940,6 +1042,7 @@ function selectComposition(comp) {
 
 function clearComposition() {
   state.selectedComposition = null;
+  saveDraft();
   document.getElementById('composition-empty-hint').style.display = 'block';
   document.getElementById('composition-preview').style.display = 'none';
   document.getElementById('btn-clear-composition').style.display = 'none';
@@ -1015,6 +1118,7 @@ function openPhotoPicker() {
 
 function selectPhoto(photoDataUri) {
   state.selectedPhoto = photoDataUri;
+  saveDraft();
   document.getElementById('photo-empty-hint').style.display = 'none';
   document.getElementById('photo-preview').style.display = 'block';
   document.getElementById('photo-preview-img').src = photoDataUri;
@@ -1023,6 +1127,7 @@ function selectPhoto(photoDataUri) {
 
 function clearPhoto() {
   state.selectedPhoto = null;
+  saveDraft();
   document.getElementById('photo-empty-hint').style.display = 'block';
   document.getElementById('photo-preview').style.display = 'none';
   document.getElementById('photo-preview-img').src = '';
@@ -1117,6 +1222,8 @@ async function handleSaveDevis(validate) {
     return;
   }
 
+  clearDraft();
+
   if (validate) {
     const valRes = await window.api.documents.validate(createRes.data.id);
     if (!valRes.ok) {
@@ -1139,13 +1246,22 @@ function confirmClearAll() {
     'Tout effacer',
     'Supprimer toutes les lignes du devis en cours ?',
     () => {
-      state.devisLines   = [];
-      state.previewDocId = null;
-      state.delivery     = { enabled: false, amount: 0, amountTTC: 0 };
+      state.devisLines          = [];
+      state.previewDocId        = null;
+      state.delivery            = { enabled: false, amount: 0, amountTTC: 0 };
+      state.selectedClient      = null;
+      state.selectedComposition = null;
+      state.selectedPhoto       = null;
+      document.getElementById('f-client').value = '';
       document.getElementById('f-delivery-enabled').checked = false;
       document.getElementById('delivery-amount-wrap').style.display = 'none';
       document.getElementById('f-delivery-amount').value = '';
       document.getElementById('f-notes').value = '';
+      document.getElementById('f-discount').value = 0;
+      document.getElementById('f-deposit').value = 0;
+      clearComposition();
+      clearPhoto();
+      clearDraft();
       renderDevisLines();
       recalcDevisTotals();
     }

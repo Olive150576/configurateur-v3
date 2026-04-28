@@ -653,7 +653,7 @@ function renderTotals(doc, subtotalHT, vatAmt, totalTTC_brut, netTTC, vatRate, c
         </div>
         <div class="total-ht-row">
           <span>TVA ${vatRate}%</span>
-          <span>${formatPrice(regularVat)} €</span>
+          <span>${formatPrice(vatAmt)} €</span>
         </div>
         ${discAmt > 0 ? `
           <div class="total-ht-row">
@@ -763,7 +763,7 @@ function r2(n) { return round2(n); }
 
 function getEmoji(text) {
   const t = (text || '').toLowerCase();
-  if (/relax/.test(t))                                     return '⚡';
+  if (/relax/.test(t) && !/sans\s*relax/.test(t))          return '⚡';
   if (/batter/.test(t))                                    return '🔋';
   if (/coutur|broderi|surpiq/.test(t))                     return '🎨';
   if (/pays|fabrication|fabriqué|made in|origine/.test(t)) return '🌍';
